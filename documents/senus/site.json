@@ -1,0 +1,363 @@
+{
+  "company": {
+    "companyDescription": "Senus is seeking to establish itself as the leading global provider of Natural Capital management software and technology solutions for Governments, State agencies, financial institutions, corporations, farmers and other landowners.",
+    "companyFacebookUrl": "https://www.facebook.com/SenusTech/",
+    "companyInstagramUrl": "",
+    "companyLinkedinUrl": "https://www.linkedin.com/company/senustech/",
+    "companyName": "SENUS",
+    "companyStockExchange": "Euronext Access Dublin",
+    "companyStockTicker": "SENUS",
+    "companyWebsite": "https://senus.com/",
+    "companyXUrl": "https://x.com/SenusTech",
+    "companyYoutubeUrl": "https://www.youtube.com/@SenusTech",
+    "irContactEmail": "ir@senus.com",
+    "irContactName": "",
+    "logoUrl": "images/logo.png",
+    "sharePriceLink": "https://live.euronext.com/en/product/equities/IE000O0F49R3-XACD"
+  },
+  "companySlug": "senus",
+  "documents": {
+    "corporate": [
+      {
+        "attachmentId": "a4c80709-6345-4809-887f-b855a32b6394",
+        "attachmentType": "OTHER",
+        "createdAt": "2026-03-19T08:38:54.562876",
+        "duration": null,
+        "fileName": "Senus-short-corporate-presentation-19032026.pdf",
+        "fileSize": 21935228,
+        "fileType": "application/pdf",
+        "id": "a4c80709-6345-4809-887f-b855a32b6394",
+        "labels": [
+          "Presentation"
+        ],
+        "publishedDate": "2026-03-19T08:42:14.554664",
+        "updatedAt": "2026-07-28T19:01:34.044087",
+        "url": "documents/corporate/a4c80709-6345-4809-887f-b855a32b6394/Senus-short-corporate-presentation-19032026.pdf"
+      }
+    ],
+    "documents": [
+      {
+        "attachmentId": "db23344e-f0f7-4ca2-945f-3828a8ab0fbb",
+        "attachmentType": "ADMIN_ADVISORY_UPLOAD",
+        "createdAt": "2025-12-17T16:17:09.484963",
+        "duration": null,
+        "fileName": "Senus-PLC-Information-Document-December-2025.pdf",
+        "fileSize": 1056649,
+        "fileType": "application/pdf",
+        "id": "db23344e-f0f7-4ca2-945f-3828a8ab0fbb",
+        "labels": [
+          "Information Document"
+        ],
+        "publishedDate": "2025-12-18T09:18:10.374301",
+        "updatedAt": "2026-07-24T15:03:01.035070",
+        "url": "documents/documents/db23344e-f0f7-4ca2-945f-3828a8ab0fbb/Senus-PLC-Information-Document-December-2025.pdf"
+      },
+      {
+        "attachmentId": "6ceb0ae8-454f-48e6-b73a-cb7f7afa6090",
+        "attachmentType": "ADMIN_ADVISORY_UPLOAD",
+        "createdAt": "2025-12-16T10:21:06.074534",
+        "duration": null,
+        "fileName": "ADF-Farm-Solutions-Consolidated-Financial-Statements-30-June-2025.pdf",
+        "fileSize": 7098868,
+        "fileType": "application/pdf",
+        "id": "6ceb0ae8-454f-48e6-b73a-cb7f7afa6090",
+        "labels": [
+          "Information Document"
+        ],
+        "publishedDate": "2025-12-18T09:18:10.374449",
+        "updatedAt": "2026-07-24T12:00:57.425012",
+        "url": "documents/documents/6ceb0ae8-454f-48e6-b73a-cb7f7afa6090/ADF-Farm-Solutions-Consolidated-Financial-Statements-30-June-2025.pdf"
+      },
+      {
+        "attachmentId": "faf71aff-286a-4a08-b064-f026ee49dc76",
+        "attachmentType": "ADMIN_ADVISORY_UPLOAD",
+        "createdAt": "2025-12-16T10:20:55.378045",
+        "duration": null,
+        "fileName": "Senus-Limited-Company-Balance-Sheet-as-at-8-December-2025.pdf",
+        "fileSize": 5382515,
+        "fileType": "application/pdf",
+        "id": "faf71aff-286a-4a08-b064-f026ee49dc76",
+        "labels": [
+          "Information Document"
+        ],
+        "publishedDate": "2025-12-18T09:18:10.374596",
+        "updatedAt": "2026-07-24T12:04:18.892621",
+        "url": "documents/documents/faf71aff-286a-4a08-b064-f026ee49dc76/Senus-Limited-Company-Balance-Sheet-as-at-8-December-2025.pdf"
+      },
+      {
+        "attachmentId": "9b3e8403-56fa-4481-aee4-90d37602c4cb",
+        "attachmentType": "ADMIN_ADVISORY_UPLOAD",
+        "createdAt": "2025-12-16T10:20:42.459995",
+        "duration": null,
+        "fileName": "Senus-PLC-Memo-and-Arts.pdf",
+        "fileSize": 5740197,
+        "fileType": "application/pdf",
+        "id": "9b3e8403-56fa-4481-aee4-90d37602c4cb",
+        "labels": [
+          "Information Document"
+        ],
+        "publishedDate": "2025-12-18T09:18:10.374742",
+        "updatedAt": "2026-07-24T12:01:32.218691",
+        "url": "documents/documents/9b3e8403-56fa-4481-aee4-90d37602c4cb/Senus-PLC-Memo-and-Arts.pdf"
+      },
+      {
+        "attachmentId": "7f244a17-9d63-45f4-ab4b-a940000d5fba",
+        "attachmentType": "OTHER",
+        "createdAt": "2026-06-05T06:52:56.017512",
+        "duration": null,
+        "fileName": "Senus_Circular_Notice-of-Annual-General-Meeting-2026.pdf",
+        "fileSize": 244693,
+        "fileType": "application/pdf",
+        "id": "7f244a17-9d63-45f4-ab4b-a940000d5fba",
+        "labels": [
+          "AGM & General Meetings"
+        ],
+        "publishedDate": "2026-06-05T05:53:39.647339",
+        "updatedAt": "2026-07-25T10:00:40.978133",
+        "url": "documents/documents/7f244a17-9d63-45f4-ab4b-a940000d5fba/Senus_Circular_Notice-of-Annual-General-Meeting-2026.pdf"
+      },
+      {
+        "attachmentId": "cf54e59b-934d-4842-8d45-e660c6ea3231",
+        "attachmentType": "OTHER",
+        "createdAt": "2026-06-05T15:21:39.683441",
+        "duration": null,
+        "fileName": "Senus_Form_Proxy-for-Annual-General-Meeting-2026.pdf",
+        "fileSize": 152835,
+        "fileType": "application/pdf",
+        "id": "cf54e59b-934d-4842-8d45-e660c6ea3231",
+        "labels": [
+          "AGM & General Meetings"
+        ],
+        "publishedDate": "2026-06-05T14:22:03.425563",
+        "updatedAt": "2026-07-25T10:00:34.586117",
+        "url": "documents/documents/cf54e59b-934d-4842-8d45-e660c6ea3231/Senus_Form_Proxy-for-Annual-General-Meeting-2026.pdf"
+      }
+    ],
+    "fundraising-documents": [],
+    "fundraising-presentation": [],
+    "fundraising-terms": [],
+    "regulatory": [
+      {
+        "attachmentId": "feab3517-09f9-4a8f-95ef-35103e87a7ea",
+        "attachmentType": "ADMIN_ADVISORY_UPLOAD",
+        "createdAt": "2025-12-17T16:17:39.283743",
+        "duration": null,
+        "fileName": "Senus-PLC-Direct-Listing-Launch-Press-Release.pdf",
+        "fileSize": 195415,
+        "fileType": "application/pdf",
+        "id": "feab3517-09f9-4a8f-95ef-35103e87a7ea",
+        "labels": [
+          "Results"
+        ],
+        "publishedDate": "2025-12-18T09:18:10.373994",
+        "updatedAt": "2026-07-24T12:01:28.269629",
+        "url": "documents/regulatory/feab3517-09f9-4a8f-95ef-35103e87a7ea/Senus-PLC-Direct-Listing-Launch-Press-Release.pdf"
+      },
+      {
+        "attachmentId": "9a584dbf-3e7d-4c3a-878f-143559bef815",
+        "attachmentType": "OTHER",
+        "createdAt": "2026-02-17T08:58:07.136764",
+        "duration": null,
+        "fileName": "Senus-Notification-of-Results-HY-Dec-2025.pdf",
+        "fileSize": 176237,
+        "fileType": "application/pdf",
+        "id": "9a584dbf-3e7d-4c3a-878f-143559bef815",
+        "labels": [],
+        "publishedDate": "2026-02-17T08:59:54.536034",
+        "updatedAt": "2026-07-24T14:00:17.956554",
+        "url": "documents/regulatory/9a584dbf-3e7d-4c3a-878f-143559bef815/Senus-Notification-of-Results-HY-Dec-2025.pdf"
+      },
+      {
+        "attachmentId": "239b3ed5-a84c-448e-ae20-581124ec5ace",
+        "attachmentType": "OTHER",
+        "createdAt": "2026-03-19T08:41:30.455239",
+        "duration": null,
+        "fileName": "Senus_HalfYearResultsDec2025_PR_V19032026-FINAL-clean.pdf",
+        "fileSize": 255602,
+        "fileType": "application/pdf",
+        "id": "239b3ed5-a84c-448e-ae20-581124ec5ace",
+        "labels": [
+          "Results"
+        ],
+        "publishedDate": "2026-03-19T08:42:14.555008",
+        "updatedAt": "2026-07-24T15:03:06.936028",
+        "url": "documents/regulatory/239b3ed5-a84c-448e-ae20-581124ec5ace/Senus_HalfYearResultsDec2025_PR_V19032026-FINAL-clean.pdf"
+      },
+      {
+        "attachmentId": "b504def3-9c86-43ee-8ee2-9fed65a90134",
+        "attachmentType": "OTHER",
+        "createdAt": "2026-06-05T06:51:28.135282",
+        "duration": null,
+        "fileName": "Senus_PR_Notice-of-AGM-2026.pdf",
+        "fileSize": 98847,
+        "fileType": "application/pdf",
+        "id": "b504def3-9c86-43ee-8ee2-9fed65a90134",
+        "labels": [
+          "AGM"
+        ],
+        "publishedDate": "2026-06-05T05:52:11.443974",
+        "updatedAt": "2026-07-25T10:00:07.315517",
+        "url": "documents/regulatory/b504def3-9c86-43ee-8ee2-9fed65a90134/Senus_PR_Notice-of-AGM-2026.pdf"
+      },
+      {
+        "attachmentId": "c4fbefc1-2609-46c7-a5ae-185f990df248",
+        "attachmentType": "OTHER",
+        "createdAt": "2026-06-24T15:10:08.330989",
+        "duration": null,
+        "fileName": "Senus_PR_LeadershipTransition_V24062026.pdf",
+        "fileSize": 87088,
+        "fileType": "application/pdf",
+        "id": "c4fbefc1-2609-46c7-a5ae-185f990df248",
+        "labels": [
+          "Result"
+        ],
+        "publishedDate": "2026-06-24T14:11:11.331221",
+        "updatedAt": "2026-07-25T12:00:14.805932",
+        "url": "documents/regulatory/c4fbefc1-2609-46c7-a5ae-185f990df248/Senus_PR_LeadershipTransition_V24062026.pdf"
+      },
+      {
+        "attachmentId": "d178453b-d6c3-4e72-89d3-b4b245ec51e9",
+        "attachmentType": "OTHER",
+        "createdAt": "2026-07-08T06:59:35.075773",
+        "duration": null,
+        "fileName": "Senus_PR_AGMStatement_V08072026.pdf",
+        "fileSize": 164832,
+        "fileType": "application/pdf",
+        "id": "d178453b-d6c3-4e72-89d3-b4b245ec51e9",
+        "labels": [
+          "AGM"
+        ],
+        "publishedDate": "2026-07-08T05:59:43.216773",
+        "updatedAt": "2026-07-25T14:03:22.426106",
+        "url": "documents/regulatory/d178453b-d6c3-4e72-89d3-b4b245ec51e9/Senus_PR_AGMStatement_V08072026.pdf"
+      },
+      {
+        "attachmentId": "87e1143b-a54b-4e10-a5b6-e8d3ddeff57a",
+        "attachmentType": "OTHER",
+        "createdAt": "2026-07-08T14:57:13.403649",
+        "duration": null,
+        "fileName": "SenusPLC_Result-of-AGM-Announcement-V08072026.pdf",
+        "fileSize": 110631,
+        "fileType": "application/pdf",
+        "id": "87e1143b-a54b-4e10-a5b6-e8d3ddeff57a",
+        "labels": [
+          "Result"
+        ],
+        "publishedDate": "2026-07-08T14:00:42.426126",
+        "updatedAt": "2026-07-25T14:03:21.932485",
+        "url": "documents/regulatory/87e1143b-a54b-4e10-a5b6-e8d3ddeff57a/SenusPLC_Result-of-AGM-Announcement-V08072026.pdf"
+      }
+    ],
+    "reports": [
+      {
+        "attachmentId": "8bc6a2f0-8560-415e-ae92-747755e23009",
+        "attachmentType": "OTHER",
+        "createdAt": "2026-03-19T08:37:30.875368",
+        "duration": null,
+        "fileName": "Senus_HalfYearResultsDec2025_PR_V19032026-FINAL-clean.pdf",
+        "fileSize": 255602,
+        "fileType": "application/pdf",
+        "id": "8bc6a2f0-8560-415e-ae92-747755e23009",
+        "labels": [
+          "Half Year Results"
+        ],
+        "publishedDate": "2026-03-19T08:38:00.957349",
+        "updatedAt": "2026-07-24T15:03:14.091965",
+        "url": "documents/reports/8bc6a2f0-8560-415e-ae92-747755e23009/Senus_HalfYearResultsDec2025_PR_V19032026-FINAL-clean.pdf"
+      }
+    ]
+  },
+  "fundraising": {
+    "documents": {
+      "documentIds": [],
+      "documentLabels": [
+        "Document"
+      ],
+      "fileLabels": {}
+    },
+    "enabled": false,
+    "generalInfo": {
+      "discountToSharePrice": "",
+      "enlargedShareCapitalPercentage": "",
+      "newOrdinarySharesToBeIssued": "",
+      "offerClosing": "",
+      "offerOpenFrom": "",
+      "offerPricePerShare": "",
+      "offerStatistics": [
+        {
+          "id": "targetInvestment",
+          "label": "Target Investment",
+          "value": ""
+        },
+        {
+          "id": "offerPricePerShare",
+          "label": "Offer Price per share",
+          "value": ""
+        },
+        {
+          "id": "discountToSharePrice",
+          "label": "Discount to share price",
+          "value": ""
+        },
+        {
+          "id": "newOrdinarySharesToBeIssued",
+          "label": "New Ordinary Shares to be issued",
+          "value": ""
+        },
+        {
+          "id": "enlargedShareCapitalPercentage",
+          "label": "% of enlarged share capital",
+          "value": ""
+        }
+      ],
+      "targetInvestment": ""
+    },
+    "presentation": {
+      "badgeAttachmentId": null,
+      "badgeFileName": null,
+      "badgeUrl": null,
+      "documentIds": [],
+      "documentLabels": [
+        "Presentation"
+      ],
+      "fileLabels": {},
+      "managementTeamImageAttachmentId": null,
+      "managementTeamImageFileName": null,
+      "managementTeamImageUrl": null
+    },
+    "qa": [],
+    "terms": {
+      "documentIds": [],
+      "documentLabels": [
+        "Terms"
+      ],
+      "fileLabels": {}
+    }
+  },
+  "publishedAt": "2026-08-17T09:36:41.183473Z",
+  "releaseId": "20260817T093639Z-dedb974d",
+  "resultsExtras": {
+    "qa": [],
+    "video": {
+      "attachmentId": null,
+      "fileName": null,
+      "fileType": null,
+      "mode": "url",
+      "url": "https://youtu.be/i-ercPvFMKU?si=3K3BDzhjbfZNahFp"
+    }
+  },
+  "schemaVersion": 1,
+  "theme": {
+    "fontStyle": "Figtree",
+    "heroCarouselSpeedSeconds": 5,
+    "heroImageUrl": "images/hero-1.png",
+    "heroImageUrls": [
+      "images/hero-1.png"
+    ],
+    "primaryColor": "#133C27",
+    "subtitle": "Technologies to Measure Nature",
+    "textColor": "#133C27",
+    "title": "INVESTOR RELATIONS",
+    "titleAndSubtitleColor": "#FFFFFF"
+  }
+}
