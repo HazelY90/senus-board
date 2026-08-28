@@ -1,5 +1,9 @@
 package com.hazely.senusboard.jobs.ingestion;
 
+import com.hazely.senusboard.jobs.ingestion.dtos.DocumentExtraction;
+import com.hazely.senusboard.jobs.ingestion.dtos.DownloadedDocument;
+import com.hazely.senusboard.jobs.ingestion.services.ExtractionService;
+import com.hazely.senusboard.jobs.ingestion.services.SourceDiscoveryService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
@@ -30,9 +34,9 @@ public class IngestionRunner implements ApplicationRunner {
         List<DownloadedDocument> docs = sourceService.fetch();
         log.info("Downloaded {} source document(s)", docs.size());
         List<DocumentExtraction> results = extractionService.extract(docs);
-        int itemCount = results.stream()
-                .mapToInt(result -> result.result().extractionItems().size())
+        int periodCount = results.stream()
+                .mapToInt(result -> result.result().periods().size())
                 .sum();
-        log.info("Extracted {} candidate item(s) from {} document(s)", itemCount, results.size());
+        log.info("Extracted {} reporting period(s) from {} document(s)", periodCount, results.size());
     }
 }

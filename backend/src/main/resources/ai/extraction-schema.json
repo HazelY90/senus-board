@@ -1,111 +1,101 @@
 {
   "type": "object",
-  "description": "Structured extraction output for one source document.",
+  "description": "Stable category values extracted from one source document.",
   "properties": {
     "publicationDate": {
       "type": ["string", "null"],
-      "description": "Document publication date in YYYY-MM-DD form, or null when it is not stated."
+      "description": "Document publication date in YYYY-MM-DD form, or null when unavailable."
     },
-    "reportingPeriods": {
+    "aiSummary": {
+      "type": "string",
+      "description": "Concise source-document summary grounded only in the document."
+    },
+    "periods": {
       "type": "array",
-      "description": "Reporting periods referenced by extracted metric items.",
+      "description": "Reporting periods with stable category values.",
       "items": {
         "type": "object",
         "properties": {
-          "code": {
-            "type": "string",
-            "description": "Candidate canonical period code, such as FY2025, H1_2025, or H2_2025."
-          },
-          "label": {
-            "type": "string",
-            "description": "Reporting period label supported by the document."
-          },
-          "periodType": {
-            "type": "string",
-            "enum": ["FULL_YEAR", "HALF_YEAR"],
-            "description": "Reporting period type supported by the database."
-          },
           "startDate": {
             "type": "string",
-            "description": "Reporting period start date in YYYY-MM-DD form."
+            "description": "Exact reporting period start date in YYYY-MM-DD form."
           },
           "endDate": {
             "type": "string",
-            "description": "Reporting period end date in YYYY-MM-DD form."
-          }
-        },
-        "required": ["code", "label", "periodType", "startDate", "endDate"],
-        "additionalProperties": false
-      }
-    },
-    "extractionItems": {
-      "type": "array",
-      "description": "Metric values extracted from the source document and awaiting backend validation.",
-      "items": {
-        "type": "object",
-        "properties": {
-          "periodCode": {
-            "type": "string",
-            "description": "Code of an entry in reportingPeriods."
+            "description": "Exact reporting period end date in YYYY-MM-DD form."
           },
-          "metricCode": {
-            "type": "string",
-            "description": "Metric code from the catalogue supplied with the request."
+          "growth": {
+            "type": ["object", "null"],
+            "properties": {
+              "revenue": {"type": ["number", "null"]}
+            },
+            "required": ["revenue"],
+            "additionalProperties": false
           },
-          "rawValue": {
-            "type": "string",
-            "description": "Value exactly as displayed in the source, including signs, symbols, and scale labels."
+          "profitability": {
+            "type": ["object", "null"],
+            "properties": {
+              "grossProfit": {"type": ["number", "null"]},
+              "grossMargin": {"type": ["number", "null"]},
+              "operatingLoss": {"type": ["number", "null"]},
+              "costOfSales": {"type": ["number", "null"]},
+              "administrativeExpenses": {"type": ["number", "null"]}
+            },
+            "required": [
+              "grossProfit",
+              "grossMargin",
+              "operatingLoss",
+              "costOfSales",
+              "administrativeExpenses"
+            ],
+            "additionalProperties": false
           },
-          "numericValue": {
-            "type": "number",
-            "description": "Value normalized to the base unit defined by unit."
+          "liquidity": {
+            "type": ["object", "null"],
+            "properties": {
+              "cashBalance": {"type": ["number", "null"]},
+              "operatingCashFlow": {"type": ["number", "null"]},
+              "workingCapitalMovement": {"type": ["number", "null"]},
+              "currentAssets": {"type": ["number", "null"]},
+              "currentLiabilities": {"type": ["number", "null"]},
+              "netCurrentPosition": {"type": ["number", "null"]},
+              "capitalExpenditure": {"type": ["number", "null"]}
+            },
+            "required": [
+              "cashBalance",
+              "operatingCashFlow",
+              "workingCapitalMovement",
+              "currentAssets",
+              "currentLiabilities",
+              "netCurrentPosition",
+              "capitalExpenditure"
+            ],
+            "additionalProperties": false
           },
-          "unit": {
-            "type": "string",
-            "enum": ["EUR", "PERCENT", "PERCENTAGE_POINT", "COUNT", "RATIO"],
-            "description": "Metric unit supported by the database."
-          },
-          "dimensionType": {
-            "type": ["string", "null"],
-            "enum": ["TOTAL", "CUSTOMER_SEGMENT", "SOLUTION", "GEOGRAPHY", "PIPELINE_STAGE", null],
-            "description": "Dimension type from the catalogue, or null when no matching dimension is available."
-          },
-          "dimensionCode": {
-            "type": ["string", "null"],
-            "description": "Dimension code from the catalogue, or null when no matching dimension is available."
-          },
-          "sourcePage": {
-            "type": "integer",
-            "minimum": 1,
-            "description": "One-based source page or logical source section number."
-          },
-          "sourceText": {
-            "type": "string",
-            "description": "Short verbatim evidence containing the metric label, value, and period context."
-          },
-          "confidence": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 1,
-            "description": "Extraction confidence between zero and one."
+          "capital": {
+            "type": ["object", "null"],
+            "properties": {
+              "bankDebt": {"type": ["number", "null"]},
+              "loanMovement": {"type": ["number", "null"]},
+              "interestExpense": {"type": ["number", "null"]},
+              "netAssetPosition": {"type": ["number", "null"]}
+            },
+            "required": ["bankDebt", "loanMovement", "interestExpense", "netAssetPosition"],
+            "additionalProperties": false
           }
         },
         "required": [
-          "periodCode",
-          "metricCode",
-          "rawValue",
-          "numericValue",
-          "unit",
-          "dimensionType",
-          "dimensionCode",
-          "sourcePage",
-          "sourceText",
-          "confidence"
+          "startDate",
+          "endDate",
+          "growth",
+          "profitability",
+          "liquidity",
+          "capital"
         ],
         "additionalProperties": false
       }
     }
   },
-  "required": ["publicationDate", "reportingPeriods", "extractionItems"],
+  "required": ["publicationDate", "aiSummary", "periods"],
   "additionalProperties": false
 }

@@ -10,6 +10,7 @@ app:
     api-key: ${OPENAI_API_KEY}
     model: gpt-5.6-luna
     max-output-tokens: 20000
+    max-retries: 2
 
   job:
     ingestion:

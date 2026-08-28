@@ -1,5 +1,11 @@
 package com.hazely.senusboard.jobs.ingestion;
 
+import com.hazely.senusboard.jobs.ingestion.services.AnalyticsPersistenceService;
+import com.hazely.senusboard.jobs.ingestion.services.AnalyticsService;
+import com.hazely.senusboard.jobs.ingestion.services.CalculationService;
+import com.hazely.senusboard.jobs.ingestion.services.ExtractionPersistenceService;
+import com.hazely.senusboard.jobs.ingestion.services.ExtractionService;
+import com.hazely.senusboard.jobs.ingestion.services.SourceDiscoveryService;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -7,11 +13,16 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 
 import tools.jackson.databind.ObjectMapper;
-import com.hazely.senusboard.repositories.DimensionRepository;
-import com.hazely.senusboard.repositories.ExtractionItemRepository;
+import com.hazely.senusboard.repositories.AnalyticsRepository;
+import com.hazely.senusboard.repositories.CalculatedCapitalRepository;
+import com.hazely.senusboard.repositories.CalculatedGrowthRepository;
+import com.hazely.senusboard.repositories.CalculatedLiquidityRepository;
+import com.hazely.senusboard.repositories.CalculatedProfitabilityRepository;
+import com.hazely.senusboard.repositories.CapitalRepository;
+import com.hazely.senusboard.repositories.GrowthRepository;
 import com.hazely.senusboard.repositories.IngestionRunRepository;
-import com.hazely.senusboard.repositories.MetricRepository;
-import com.hazely.senusboard.repositories.MetricValueRepository;
+import com.hazely.senusboard.repositories.LiquidityRepository;
+import com.hazely.senusboard.repositories.ProfitabilityRepository;
 import com.hazely.senusboard.repositories.ReportingPeriodRepository;
 import com.hazely.senusboard.repositories.SourceDocumentRepository;
 
@@ -46,58 +57,114 @@ public class IngestionJob {
     }
 
     /**
-     * Creates the extraction orchestrator and catalogue provider.
+     * Creates the extraction orchestrator.
      */
     @Bean
     ExtractionService extractionService(
             AiClient aiClient,
-            MetricRepository metricRepo,
-            DimensionRepository dimensionRepo,
             ExtractionPersistenceService persistenceService,
-            PromotionService promotionService
+            AnalyticsService analyticsService
     ) {
-        return new ExtractionService(
-                aiClient,
-                metricRepo,
-                dimensionRepo,
-                persistenceService,
-                promotionService
+        return new ExtractionService(aiClient, persistenceService, analyticsService);
+    }
+
+    /**
+     * Creates deterministic calculation support for every reporting period.
+     */
+    @Bean
+    CalculationService calculationService(
+            ReportingPeriodRepository periodRepo,
+            GrowthRepository growthRepo,
+            ProfitabilityRepository profitRepo,
+            LiquidityRepository liquidityRepo,
+            CapitalRepository capitalRepo,
+            CalculatedGrowthRepository calcGrowthRepo,
+            CalculatedProfitabilityRepository calcProfitRepo,
+            CalculatedLiquidityRepository calcLiquidityRepo,
+            CalculatedCapitalRepository calcCapitalRepo
+    ) {
+        return new CalculationService(
+                periodRepo,
+                growthRepo,
+                profitRepo,
+                liquidityRepo,
+                capitalRepo,
+                calcGrowthRepo,
+                calcProfitRepo,
+                calcLiquidityRepo,
+                calcCapitalRepo
         );
     }
 
     /**
-     * Creates the transactional persistence boundary for ingestion state and extracted items.
+     * Creates the transactional persistence boundary for ingestion state and category values.
      */
     @Bean
     ExtractionPersistenceService extractionPersistenceService(
             SourceDocumentRepository sourceRepo,
             IngestionRunRepository runRepo,
-            ExtractionItemRepository itemRepo,
-            MetricRepository metricRepo,
-            DimensionRepository dimensionRepo,
             ReportingPeriodRepository periodRepo,
-            OpenAiProperties openAiProps
+            GrowthRepository growthRepo,
+            ProfitabilityRepository profitRepo,
+            LiquidityRepository liquidityRepo,
+            CapitalRepository capitalRepo,
+            OpenAiProperties openAiProps,
+            CalculationService calculationService
     ) {
         return new ExtractionPersistenceService(
                 sourceRepo,
                 runRepo,
-                itemRepo,
-                metricRepo,
-                dimensionRepo,
                 periodRepo,
-                openAiProps
+                growthRepo,
+                profitRepo,
+                liquidityRepo,
+                capitalRepo,
+                openAiProps,
+                calculationService
         );
     }
 
-    /** Creates the automatic confirmation and formal-value promotion service. */
+    /**
+     * Creates the independent analytics persistence boundary.
+     */
     @Bean
-    PromotionService promotionService(
-            ExtractionItemRepository itemRepo,
+    AnalyticsPersistenceService analyticsPersistenceService(
             ReportingPeriodRepository periodRepo,
-            MetricRepository metricRepo,
-            MetricValueRepository valueRepo
+            AnalyticsRepository analyticsRepo
     ) {
-        return new PromotionService(itemRepo, periodRepo, metricRepo, valueRepo);
+        return new AnalyticsPersistenceService(periodRepo, analyticsRepo);
+    }
+
+    /**
+     * Creates complete-dataset analytics orchestration.
+     */
+    @Bean
+    AnalyticsService analyticsService(
+            AiClient aiClient,
+            AnalyticsPersistenceService persistenceService,
+            ReportingPeriodRepository periodRepo,
+            GrowthRepository growthRepo,
+            ProfitabilityRepository profitRepo,
+            LiquidityRepository liquidityRepo,
+            CapitalRepository capitalRepo,
+            CalculatedGrowthRepository calcGrowthRepo,
+            CalculatedProfitabilityRepository calcProfitRepo,
+            CalculatedLiquidityRepository calcLiquidityRepo,
+            CalculatedCapitalRepository calcCapitalRepo
+    ) {
+        return new AnalyticsService(
+                aiClient,
+                persistenceService,
+                periodRepo,
+                growthRepo,
+                profitRepo,
+                liquidityRepo,
+                capitalRepo,
+                calcGrowthRepo,
+                calcProfitRepo,
+                calcLiquidityRepo,
+                calcCapitalRepo
+        );
     }
 
     /**

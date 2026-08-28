@@ -2,252 +2,201 @@
 
 ## 1. Purpose
 
-The AI extraction job is a one-time, non-web process that reads configured source documents, extracts and analyses candidate financial data, and stores the results for review.
+The ingestion job discovers source documents, downloads them, extracts a fixed financial schema and source summary, validates reporting periods, writes the reported and calculated category tables, and then requests AI analysis of the complete stored dataset.
 
-AI output must never be written directly to `metric_values`. Candidate data is first stored in `extraction_items` with a `PENDING` validation status. Only verified items may be promoted to formal metric values.
+AI extracts reported fields only. Deterministic values are calculated by application code after the reported category rows are stored.
 
-The job reuses the backend entities, repositories, datasource, and transaction management, but it does not remain active with the Spring web application.
-
-## 2. Runtime Model
-
-The ingestion process runs as a dedicated Spring Boot command-line job with the `ingestion` profile.
+## 2. Runtime Flow
 
 ~~~text
-Start non-web Spring context
+Start the non-web Spring context
         |
         v
-Validate configuration and source inputs
+Validate job and OpenAI configuration
         |
         v
-Create or reuse source document
+Discover and download source documents
         |
         v
-Create RUNNING ingestion run
+For each document:
+    create or reuse source_documents metadata
         |
         v
-Read and prepare document content
+    create a RUNNING ingestion_runs row
         |
         v
-Call OpenAI outside a database transaction
+    upload the document and request strict JSON output
         |
         v
-Normalise and validate candidate output
+    delete the uploaded provider file
         |
         v
-Store PENDING extraction items
+    validate reporting periods and fixed category fields
         |
         v
-Mark ingestion run COMPLETED
+    upsert reporting_periods and category rows
         |
         v
-Exit process
+    recalculate affected calculated category rows
+        |
+        v
+    mark the run COMPLETED
+        |
+        v
+After every document is complete:
+    load the complete reported and calculated dataset
+        |
+        v
+    submit the dataset for strict structured AI analysis
+        |
+        v
+    validate and upsert analytics rows by reporting period
+        |
+        v
+Exit
 ~~~
 
-Database migrations remain a separate deployment or local-development step. The ingestion profile therefore disables Flyway and the web server.
+Documents are processed sequentially. A document failure stops the remaining work and marks its ingestion run as FAILED.
 
-## 3. Package Structure
+## 3. Structured Output
 
-The job implementation is located under:
+The provider returns:
 
-~~~text
-com.hazely.senusboard.jobs.ingestion
+~~~json
+{
+  "publicationDate": "2026-03-19",
+  "aiSummary": "Unaudited half-year results covering HY2026 with HY2025 comparative figures.",
+  "periods": [
+    {
+      "startDate": "2025-07-01",
+      "endDate": "2025-12-31",
+      "growth": {},
+      "profitability": {},
+      "liquidity": {},
+      "capital": {}
+    }
+  ]
+}
 ~~~
 
-### 3.1 IngestionJob
+Each category object has a fixed field set matching the category table. Individual values and complete category objects may be null.
 
-Defines the configuration boundary for the one-time job. It is responsible for activating ingestion-only beans and configuration without starting the web layer.
+`aiSummary` contains a concise source-document summary and is stored in `source_documents.ai_summary`.
 
-It must not contain document parsing, AI request, or persistence logic.
+The `periods` array contains only the document's primary reporting period and any formal immediately preceding comparative period. Incidental historical references do not create period objects.
 
-### 3.2 IngestionRunner
+The provider returns exact date ranges without period identity fields. The backend aligns supported boundaries to canonical periods: July through June becomes the ending-year `FYyyyy`, and July through December becomes the following-year `HYyyyy`. Unsupported ranges are skipped.
 
-Coordinates one complete job execution. Its responsibilities are:
+## 4. Extraction Rules
 
-- Read job arguments.
-- Validate required configuration.
-- Invoke the extraction workflow.
-- Convert failures into a non-zero process exit status.
-- Allow the application context to close when execution finishes.
+- Identify the document's primary reporting period from its title, results heading, main financial-statement headings, and stated period end date.
+- Extract the primary reporting period when it contains at least one supported fixed metric.
+- Extract an immediately preceding period only when it is a formal parallel comparative column in the main financial statements or main results table.
+- Inspect the complete primary statements and their formal comparative columns.
+- Ignore isolated references to older reports, older financial years, opening balances, event dates, acquisition dates, strategy baselines, and historical examples.
+- Ignore a historical value that appears only in narrative text, a note, a footnote, or a chart annotation unless the same period is a formal main comparative column.
+- Do not treat the publication date, document creation date, event date, or target date as a reporting period.
+- Do not return a period that contains no supported fixed metric values.
+- Return exact start and end dates for the supported annual and half-year documents.
+- Extract consolidated or group figures when both group and company figures are present.
+- Convert thousands and millions to EUR base units.
+- Return displayed percentages without dividing by 100.
+- Preserve accounting signs.
+- Return null when a value is missing or ambiguous.
+- Do not invent, derive, or rename fields.
+- Return only fields defined by the fixed extraction schema.
 
-### 3.3 ExtractionService
+## 5. Persistence Transactions
 
-Orchestrates extraction for each source document. Its responsibilities are:
+### 5.1 Start
 
-- Detect the source document by file hash.
-- Create a new `ingestion_runs` record with `RUNNING` status.
-- Read and prepare document content.
-- Call `AiClient` outside long-running database transactions.
-- Pass provider output to `AnalysisService`.
-- Persist candidate values as `PENDING` extraction items.
-- Mark the ingestion run as `COMPLETED` or `FAILED`.
+The start transaction:
 
-### 3.4 AnalysisService
+- Calculates the file SHA-256 hash.
+- Creates or updates `source_documents` metadata.
+- Creates a `RUNNING` ingestion run with the configured model and start time.
 
-Normalises and validates provider output before review. Its responsibilities are:
+### 5.2 Complete
 
-- Validate the structured response shape.
-- Parse numeric values into `BigDecimal`.
-- Normalise metric, unit, period, and dimension codes.
-- Validate page numbers and confidence values.
-- Preserve supporting source text.
-- Reject incomplete or structurally invalid candidates.
+The completion transaction:
 
-This service must not write unverified data to `metric_values`.
+- Requires the ingestion run to be RUNNING.
+- Validates the optional publication date.
+- Validates and stores the non-blank source-document AI summary.
+- Derives canonical period codes, labels, and types from exact supported date boundaries.
+- Rejects duplicate canonical periods in one extraction response.
+- Validates period type and dates.
+- Rejects a period whose category objects contain no fixed metric value.
+- Creates or updates each reporting period by its backend-derived canonical code.
+- Skips unsupported date ranges without modifying a canonical reporting period.
+- Upserts each non-null category object by `reporting_period_id`.
+- Marks the ingestion run COMPLETED.
 
-### 3.5 AiClient
+Any validation or persistence error rolls back the completion transaction.
 
-Defines the provider boundary for AI requests. Its responsibilities are:
+After reported category rows are written, the same transaction recalculates `calculated_growth`, `calculated_profitability`, `calculated_liquidity`, and `calculated_capital` as required. Calculations use decimal arithmetic and explicit rounding rules. A missing input or zero denominator produces null rather than an exception or zero result.
 
-- Build structured extraction requests.
-- Send document content and extraction instructions to OpenAI.
-- Request a predictable structured response.
-- Return provider-neutral result objects to the service layer.
-- Expose request failures without performing database operations.
+### 5.3 Fail
 
-OpenAI-specific request and response types should remain behind this interface.
+The failure transaction records the completion time, a concise error summary, and FAILED status.
 
-### 3.6 PromotionService
+## 6. Complete-Dataset Analysis
 
-Converts verified extraction items into formal metric values. Its responsibilities are:
+After every document in the ingestion batch has completed, the job loads all available reporting periods together with their reported and calculated category values. It serializes this complete dataset as the input to a separate AI analysis request.
 
-- Require `VERIFIED` validation status.
-- Resolve existing reporting period, metric, dimension, and source records.
-- Confirm that the extracted unit matches the metric unit.
-- Create or update the matching `metric_values` row.
-- Set `extraction_item_id` to preserve the extraction origin.
-- Perform promotion in one short transaction.
-- Remain idempotent when promotion is requested more than once.
+The analysis response uses a strict schema:
 
-The service must resolve shared records by their unique codes instead of creating duplicate reference rows.
-
-### 3.7 IngestionProperties
-
-Holds external job configuration. Planned settings include:
-
-- Source document locations.
-- OpenAI model selection.
-- Request limits and timeouts.
-- Retry limits.
-- Job feature switches.
-
-Sensitive settings must come from environment variables or a deployment secret manager and must never be logged.
-
-## 4. Review Boundary
-
-`ExtractionReviewService` belongs to the regular backend service layer rather than the one-time job package. It supports the review workflow while the web application is running.
-
-The review workflow is:
-
-1. Load `PENDING` extraction items.
-2. Compare each candidate with its source page and supporting text.
-3. Mark valid items as `VERIFIED`.
-4. Mark invalid items as `REJECTED`.
-5. Invoke `PromotionService` only for verified items.
-
-If review is later automated, the same validation and promotion rules must still be applied.
-
-## 5. Database State Transitions
-
-### 5.1 Ingestion Run
-
-~~~text
-RUNNING -> COMPLETED
-RUNNING -> FAILED
+~~~json
+{
+  "periods": [
+    {
+      "periodCode": "HY2026",
+      "growthAnalytics": "Revenue increased against the equivalent half-year period.",
+      "profitabilityAnalytics": "Gross margin improved while operating loss increased.",
+      "liquidityAnalytics": "Closing cash increased, while operating cash flow remained negative.",
+      "capitalAnalytics": "The period closed with positive net cash based on reported cash and bank debt.",
+      "totalAnalytics": "Growth and margin improved, but operating losses and negative operating cash flow remain material."
+    }
+  ]
+}
 ~~~
 
-- `started_at` is set when the run is created.
-- `completed_at` is set when the job succeeds or fails.
-- `error_message` contains a safe failure summary for a failed run.
-- Secrets, full request headers, and sensitive provider responses must not be stored in `error_message`.
+The backend validates that every returned period code exists in `reporting_periods`, rejects duplicate period codes, and upserts one `analytics` row per period.
 
-### 5.2 Extraction Item
+The analysis prompt requires the model to use only supplied reported and calculated values, keep null values unavailable, compare equivalent period types only, distinguish calculated values from reported values, and avoid forecasts, recommendations, or unsupported causes.
 
-~~~text
-PENDING -> VERIFIED -> promoted to metric_values
-PENDING -> REJECTED
-~~~
+The analysis request runs outside a database transaction. Its persistence step uses a separate short transaction. An analysis request or validation failure leaves all reported and calculated data unchanged.
 
-A verified item remains available after promotion so the formal value retains traceability through `metric_values.extraction_item_id`.
+## 7. Update Policy
 
-## 6. Transaction Boundaries
+Every category table has a unique `reporting_period_id`. A later extraction for the same period updates the existing row.
 
-External document and AI operations must not hold an open database transaction.
+When multiple documents report the same period, later documents take precedence field by field. A later non-null value replaces the existing value, while a later null leaves the existing value unchanged.
 
-Recommended transaction boundaries are:
+When a period changes, calculations for that period are refreshed. Revenue growth for a later comparable period must also be refreshed because it depends on the changed period as its comparison input.
 
-1. Create or resolve the source document and create the ingestion run, then commit.
-2. Read files and call OpenAI without a database transaction.
-3. Persist analysed extraction items and mark the run completed in a short transaction.
-4. Mark the run failed in a separate short transaction when processing fails.
-5. Review an extraction item in a short transaction.
-6. Promote one verified item or one controlled batch in a short transaction.
+After any successful ingestion batch changes reported or calculated values, complete-dataset analysis is regenerated so every affected `analytics` row uses the same dataset version.
 
-## 7. Idempotency
+## 8. Configuration and Security
 
-The job must be safe to retry.
+- Run only under the ingestion profile.
+- Keep Flyway disabled during extraction.
+- Validate the database schema before starting the job.
+- Keep the OpenAI API key outside source control.
+- Restrict downloads and redirects to the configured HTTPS source host.
+- Enforce file-size and normalized-path checks.
+- Reuse an existing regular file when the resolved safe filename already exists in the download directory, without downloading the file again.
+- Use `store: false` for provider responses.
+- Attempt to delete every uploaded provider file.
+- Do not log source content, provider output, API keys, or request headers.
 
-- Use `source_documents.file_hash` to detect an already known source file.
-- Do not call OpenAI again when a completed extraction run already represents the same source and extraction configuration unless an explicit force option is supplied.
-- Use the unique metric-value key `(period_id, metric_id, dimension_id)` to prevent duplicate formal values.
-- Check for an existing metric value before promotion and apply an explicit update policy.
-- Preserve the extraction item ID used for each promoted value.
-- Do not retry invalid configuration or schema-validation failures automatically.
+## 9. Operational Constraints
 
-## 8. Failure Handling
-
-Failures are divided into the following categories:
-
-- Configuration failure: stop before creating an ingestion run when possible.
-- Source failure: mark the run failed when a configured document cannot be read.
-- Provider failure: record a safe summary and return a non-zero exit status.
-- Response validation failure: preserve valid diagnostics without promoting partial output.
-- Persistence failure: roll back the affected short transaction and mark the run failed in a separate transaction.
-- Promotion conflict: leave the item verified, report the conflict, and do not overwrite formal data implicitly.
-
-Retries should use bounded attempts with backoff and should apply only to transient provider or network failures.
-
-## 9. Configuration
-
-The ingestion profile is defined in `application-ingestion.yaml`:
-
-~~~yaml
-spring:
-  main:
-    web-application-type: none
-
-  flyway:
-    enabled: false
-
-app:
-  openai:
-    api-key: ${OPENAI_API_KEY}
-
-  job:
-    ingestion:
-      enabled: true
-~~~
-
-Local development stores `OPENAI_API_KEY` in the ignored `.env` file. Cloud execution must inject it through the platform secret manager. The key must not be committed, printed, or included in failure messages.
-
-Model selection is intentionally not fixed yet. It should become an external configuration value when the OpenAI client is implemented.
-
-## 10. Planned Execution
-
-After the job classes are implemented, the intended execution shape is:
-
-~~~bash
-java -jar backend.jar \
-  --spring.profiles.active=ingestion \
-  --spring.main.web-application-type=none
-~~~
-
-The process must exit with code `0` only after all configured documents finish successfully. Any incomplete or failed run must produce a non-zero exit code.
-
-## 11. Security and Data Handling
-
-- Keep API keys only in server-side environment variables or secret managers.
-- Send only the source content required for extraction.
-- Never include credentials in prompts, logs, database fields, or exception messages.
-- Record the model name in `ingestion_runs.model_name` for auditability.
-- Preserve page numbers and supporting source text for review.
-- Treat AI output as untrusted input until it passes structural validation and review.
+- Documents are processed sequentially.
+- A repeated file still starts a new ingestion run.
+- There is no extraction-configuration fingerprint.
+- There is no source-priority policy for overlapping periods.
+- OpenAI transport failures use at most two retries with short exponential backoff.
+- Field-level page evidence and confidence are not stored in the fixed category model.
+- AI analysis adds a second provider request after extraction and calculation complete.
+- Analysis text is model-generated interpretation and must remain visibly distinct from reported and calculated values.

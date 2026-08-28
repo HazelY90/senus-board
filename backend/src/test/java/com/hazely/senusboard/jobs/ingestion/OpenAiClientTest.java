@@ -1,5 +1,6 @@
 package com.hazely.senusboard.jobs.ingestion;
 
+import com.hazely.senusboard.jobs.ingestion.dtos.AiExtractionResult;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpExchange;
@@ -15,7 +16,6 @@ import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -64,15 +64,12 @@ class OpenAiClientTest {
         );
         Path file = dir.resolve("report.pdf");
         Files.writeString(file, "test document", StandardCharsets.UTF_8);
-        ExtractionCatalogue catalogue = new ExtractionCatalogue(
-                List.of(new ExtractionCatalogue.Metric("REVENUE", "Revenue", "GROWTH", "EUR", null)),
-                List.of(new ExtractionCatalogue.Dimension("TOTAL", "TOTAL", "Total"))
-        );
 
-        AiExtractionResult result = client.extract(file, catalogue);
+        AiExtractionResult result = client.extract(file);
 
-        assertThat(result.extractionItems()).hasSize(1);
-        assertThat(result.extractionItems().getFirst().metricCode()).isEqualTo("REVENUE");
+        assertThat(result.periods()).hasSize(1);
+        assertThat(result.aiSummary()).contains("FY2025 annual results");
+        assertThat(result.periods().getFirst().growth().revenue()).isEqualByComparingTo("836991");
         assertThat(uploadBody.get()).contains("name=\"purpose\"").contains("user_data");
         assertThat(uploadBody.get()).contains("filename=\"report.pdf\"").contains("test document");
         assertThat(responseBody.get().path("instructions").asText()).isEqualTo("Test extraction rules");
@@ -105,25 +102,15 @@ class OpenAiClientTest {
         responseBody.set(mapper.readTree(exchange.getRequestBody()));
         String output = """
                 {
-                  "publicationDate": null,
-                  "reportingPeriods": [{
-                    "code": "FY2025",
-                    "label": "FY 2025",
-                    "periodType": "FULL_YEAR",
-                    "startDate": "2025-01-01",
-                    "endDate": "2025-12-31"
-                  }],
-                  "extractionItems": [{
-                    "periodCode": "FY2025",
-                    "metricCode": "REVENUE",
-                    "rawValue": "EUR 1",
-                    "numericValue": 1,
-                    "unit": "EUR",
-                    "dimensionType": "TOTAL",
-                    "dimensionCode": "TOTAL",
-                    "sourcePage": 1,
-                    "sourceText": "Revenue EUR 1",
-                    "confidence": 1
+                  "publicationDate": "2025-11-19",
+                  "aiSummary": "FY2025 annual results with FY2024 comparative values.",
+                  "periods": [{
+                    "startDate": "2024-07-01",
+                    "endDate": "2025-06-30",
+                    "growth": {"revenue": 836991},
+                    "profitability": null,
+                    "liquidity": null,
+                    "capital": null
                   }]
                 }
                 """;
@@ -134,8 +121,7 @@ class OpenAiClientTest {
         message.putArray("content").addObject()
                 .put("type", "output_text")
                 .put("text", output);
-        String body = mapper.writeValueAsString(root);
-        send(exchange, 200, body);
+        send(exchange, 200, mapper.writeValueAsString(root));
     }
 
     private void send(HttpExchange exchange, int status, String body) throws IOException {

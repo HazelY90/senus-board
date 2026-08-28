@@ -9,7 +9,7 @@ SenusBoard will use the Senus investor relations website as the primary source r
 
 Financial reporting is document- and event-driven. Each source document must be stored or registered separately with its document type, publication date, reporting period, source URL, and ingestion status. New reports must append new reporting periods rather than overwrite historical records.
 
-Extracted financial facts must retain their source document, page reference, reporting period, extraction method, confidence, and validation status. Figures identified in the initial project summary must be verified against the original disclosures before they are treated as validated data. Social media must not be used as a primary financial source.
+Extracted financial facts are stored directly in the fixed reporting-period category tables. Individual values do not retain field-level source, page, extraction-method, confidence, or validation-status metadata. Figures identified in the initial project summary must be verified against the original disclosures before they are included in the supported fixed schema. Social media must not be used as a primary financial source.
 
 ## 2. Target Users
 
@@ -47,7 +47,7 @@ The application should provide an executive-level view that allows these users t
 | ROCE | Board, Equity Investors | Derived only when capital-employed inputs are available |
 | Senus 2030 target progress | Management, Board, Equity Investors | Strategic targets are available; actual progress is derived |
 
-The application must not invent unavailable metrics. A metric should be displayed only when its source facts have been validated and all inputs required for its calculation are available. Corporate events and subsequent financing must be considered before conclusions are drawn from historic period-end figures. AI-generated commentary must use only validated facts and deterministically calculated metrics, with source traceability available for each underlying fact.
+The application must not invent unavailable metrics. A metric should be displayed only when it is present in the supported fixed schema and all inputs required for its calculation are available. Corporate events and subsequent financing must be considered before conclusions are drawn from historic period-end figures. AI-generated commentary must use only stored reported values and deterministically calculated metrics.
 
 ## 4. Data Source Validation
 
@@ -146,3 +146,177 @@ All categories remain available in navigation. The application changes the landi
 | Credit Providers | Cash and Liquidity | Capital, Solvency, and Strategic Returns | Profitability and Efficiency | Growth and Revenue |
 
 The initial product must exclude month-on-month revenue growth, historical EBITDA, EBITDA margin, a full EBITDA-to-free-cash-flow bridge, debt-service coverage ratio, ROCE, and cash runway because the currently published data do not support reliable calculations. These metrics may be added later when the required source data and calculation policies are available.
+
+## 6. Final Fixed-Schema Design
+
+The source analysis above remains the complete record of available and unavailable data. The initial database implementation intentionally uses a narrower subset so that every category has a stable response shape across FY2024, FY2025, HY2025, and HY2026.
+
+An individual value may occasionally be unavailable. In that case, the field remains null and the other values for the same period remain valid.
+
+### 6.1 Reporting Period Scope
+
+| Code | Type | Comparable Period |
+| --- | --- | --- |
+| FY2024 | FULL_YEAR | FY2025 |
+| FY2025 | FULL_YEAR | FY2024 |
+| HY2025 | HALF_YEAR | HY2026 |
+| HY2026 | HALF_YEAR | HY2025 |
+
+Full-year and half-year performance values must not be compared directly. Point-in-time balances must retain their applicable reporting date.
+
+### 6.2 Fixed Growth Fields
+
+| Column | Unit | Selection Basis |
+| --- | --- | --- |
+| revenue | EUR | Consistently reported for all four validated periods |
+
+Customer counts, customer mix, revenue mix, ACV, geography, and pipeline remain part of the source analysis but are excluded from the initial fixed schema because equivalent values are not consistently available for every period.
+
+### 6.3 Fixed Profitability Fields
+
+| Column | Unit | Selection Basis |
+| --- | --- | --- |
+| gross_profit | EUR | Consistently reported for annual and half-year periods |
+| gross_margin | PERCENT | Reported in results summaries; may occasionally be absent |
+| operating_loss | EUR | Consistently reported for annual and half-year periods |
+| cost_of_sales | EUR | Consistently reported for annual and half-year periods |
+| administrative_expenses | EUR | Consistently reported for annual and half-year periods |
+
+Operating margin and R&D intensity remain excluded from the initial fixed schema because they are derived or unavailable for some periods.
+
+### 6.4 Fixed Liquidity Fields
+
+| Column | Unit | Selection Basis |
+| --- | --- | --- |
+| cash_balance | EUR | Consistently reported closing balance |
+| operating_cash_flow | EUR | Consistently reported for annual and half-year periods |
+| working_capital_movement | EUR | Available in cash-flow disclosures; may occasionally be absent |
+| current_assets | EUR | Consistently available from balance sheets |
+| current_liabilities | EUR | Consistently available from balance sheets |
+| net_current_position | EUR | Consistently available from balance sheets |
+| capital_expenditure | EUR | Available in cash-flow disclosures; may occasionally be absent |
+
+Free cash flow remains part of the broader product analysis but is excluded from the stored fixed schema because it requires a calculation policy.
+
+### 6.5 Fixed Capital Fields
+
+| Column | Unit | Selection Basis |
+| --- | --- | --- |
+| bank_debt | EUR | Available when debt is outstanding; may be absent or zero in earlier periods |
+| loan_movement | EUR | Available in financing cash flows; may occasionally be absent |
+| interest_expense | EUR | Reported across annual and half-year periods |
+| net_asset_position | EUR | Consistently available from balance sheets |
+
+Equity financing, net cash, contingent consideration, and Senus 2030 target progress remain documented above but are excluded from the initial fixed schema because they are event-specific, calculated, or not comparable across all periods.
+
+### 6.6 Storage and Missing-Value Rules
+
+- Retain `reporting_periods` and `source_documents`.
+- Store reporting values in `growth`, `profitability`, `liquidity`, and `capital`.
+- Give every category table a unique `reporting_period_id` foreign key.
+- Use fixed nullable columns instead of metric, metric-value, or dimension rows.
+- Store monetary values in EUR base units.
+- Store displayed percentages directly, so 81.7% is stored as 81.7.
+- Preserve accounting signs for deductions, losses, and values shown in parentheses.
+- Prefer consolidated or group values when both group and company values are available.
+- Keep an unavailable value null; never replace it with zero.
+- When the same reporting period is extracted again, update existing category fields with later non-null values and retain the existing value wherever the later value is null.
+
+### 6.7 Deferred Scope
+
+The complete source analysis remains available for later expansion. Excluded metrics may be introduced only after equivalent definitions and sufficiently stable values become available across comparable periods. Adding them will require an explicit schema and API design update.
+
+### 6.8 Calculated Metrics
+
+Four calculated tables store deterministic results derived from the fixed reported fields:
+
+- `calculated_growth`.
+- `calculated_profitability`.
+- `calculated_liquidity`.
+- `calculated_capital`.
+
+Each calculated table has one row per reporting period and uses a unique `reporting_period_id` foreign key. This keeps calculated values aligned with the four frontend categories while preserving their separation from reported values.
+
+This final decision supersedes the earlier initial-product exclusion for free cash flow and net cash. They are now included only as deterministic calculated fields and remain distinct from reported source values.
+
+| Table | Column | Formula | Required Inputs |
+| --- | --- | --- | --- |
+| calculated_growth | revenue_growth | `(current revenue / comparable prior revenue - 1) * 100` | Current and equivalent prior-period revenue |
+| calculated_profitability | calculated_gross_margin | `gross_profit / revenue * 100` | Gross profit and revenue |
+| calculated_profitability | operating_margin | `operating_loss / revenue * 100` | Operating loss and revenue |
+| calculated_profitability | cost_of_sales_ratio | `abs(cost_of_sales) / revenue * 100` | Cost of sales and revenue |
+| calculated_profitability | administrative_expense_ratio | `abs(administrative_expenses) / revenue * 100` | Administrative expenses and revenue |
+| calculated_liquidity | operating_cash_flow_margin | `operating_cash_flow / revenue * 100` | Operating cash flow and revenue |
+| calculated_liquidity | free_cash_flow | `operating_cash_flow + capital_expenditure` | Operating cash flow and signed capital expenditure |
+| calculated_liquidity | free_cash_flow_margin | `free_cash_flow / revenue * 100` | Free cash flow and revenue |
+| calculated_liquidity | current_ratio | `current_assets / abs(current_liabilities)` | Current assets and current liabilities |
+| calculated_liquidity | cash_ratio | `cash_balance / abs(current_liabilities)` | Cash balance and current liabilities |
+| calculated_capital | net_cash | `cash_balance - bank_debt` | Cash balance and bank debt |
+
+Revenue growth uses the previous equivalent period: FY2025 uses FY2024, and HY2026 uses HY2025. It remains null when an equivalent prior period is unavailable.
+
+Capital expenditure is stored as a negative cash outflow, so free cash flow uses addition. Bank debt is stored as a positive closing balance, so net cash uses subtraction.
+
+A calculated field remains null when any required input is null, when a denominator is zero, or when equivalent period selection is ambiguous. Calculated values must not overwrite reported fields. In particular, reported `gross_margin` remains in `profitability`, while `calculated_gross_margin` is stored in `calculated_profitability` for validation and consistent comparison.
+
+### 6.9 Reporting Period Extraction Rules
+
+Reporting periods must be derived from the time span primarily covered by the source document, not from every date or historical value mentioned in the document.
+
+- Identify the primary period from the document title, results heading, financial-statement heading, and stated period end date.
+- Extract the primary period when the document reports at least one fixed metric for that period.
+- Extract an immediately preceding comparative period only when it is presented as a formal parallel column in the main financial statements or main results table.
+- Treat a repeated comparative column as part of the document's main reporting scope, even though it covers an earlier period.
+- Ignore isolated references to older reports, older financial years, acquisition dates, incorporation dates, strategy baselines, opening balances, and historical narrative examples.
+- Ignore a historical value that appears only in prose, a note, a footnote, or a chart annotation unless the same period is a formal main comparative column.
+- Do not create a reporting period from the publication date, document creation date, event date, or target date.
+- Do not create a reporting period that has no extracted fixed metric values.
+- Derive period code, label, and type in the backend from the exact extracted start and end dates.
+- Align July through June to the ending-year full-year period and July through December to the following-year half-year period.
+- Skip any date range that does not exactly match a supported standard period boundary.
+
+For example, FY2025 annual statements may produce FY2025 and FY2024 because both are formal statement columns. A passing reference to FY2023 elsewhere in the same document must be ignored. HY2026 results may produce HY2026 and HY2025 when both appear as the main results columns.
+
+### 6.10 AI Summary and Analysis
+
+Each source document stores a nullable `ai_summary`. This is a concise summary of the individual document's reporting scope, primary period, formal comparative period, and material content found during extraction. It must not introduce facts that are absent from the source document.
+
+A separate `analytics` table stores AI-generated analysis for each reporting period. It has one row per reporting period and uses a unique `reporting_period_id` foreign key.
+
+| Column | Purpose |
+| --- | --- |
+| growth_analytics | Analysis of reported and calculated Growth values |
+| profitability_analytics | Analysis of reported and calculated Profitability values |
+| liquidity_analytics | Analysis of reported and calculated Liquidity values |
+| capital_analytics | Analysis of reported and calculated Capital values |
+| total_analytics | Combined analysis across all four categories |
+
+AI analysis runs only after all source documents in the ingestion batch have completed data extraction, persistence, and deterministic calculation. The analysis request uses the complete stored dataset across available reporting periods so the model can compare equivalent periods and interpret each period in context.
+
+The analysis must:
+
+- Use only reported and calculated values supplied in the analysis input.
+- Distinguish reported facts from calculated values.
+- Compare full-year values only with full-year values.
+- Compare half-year values only with equivalent half-year values.
+- Treat null as unavailable and never as zero.
+- Preserve the meaning of negative losses, expenses, and cash flows.
+- Avoid claims based on ignored historical references or excluded metrics.
+- Return null for a category analysis when the available data are insufficient.
+- Avoid recommendations, forecasts, or unsupported causal claims.
+
+An AI analysis failure must not roll back or invalidate successfully stored reported and calculated data.
+
+### 6.11 Period-Based API Response
+
+The data API returns one complete reporting period at a time. The response contains `period`, `growth`, `profitability`, `liquidity`, `capital`, and `analytics` as sibling objects.
+
+Reported values remain inside their matching category. Calculated values remain inside each category's `calculated` object. AI analysis remains inside the top-level `analytics` object.
+
+The frontend requests a second complete period response when it needs to compare equivalent annual or half-year periods.
+
+### 6.12 Source Document API
+
+The API provides `GET /api/v1/data/documents` for the source-document list. Each item returns the document name, document type, publication date, AI summary, and a server-hosted download URL.
+
+The download URL uses the document ID and must not expose the stored local filesystem path. It is null when no readable local file is available. `GET /api/v1/data/documents/{id}/download` resolves and downloads the local file on the server. The server must reject path-based client input and return HTTP 404 when the document or local file is unavailable.

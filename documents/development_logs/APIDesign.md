@@ -2,36 +2,36 @@
 
 ## 1. Scope
 
-This document defines only the backend APIs required to supply financial and operating data to the frontend. User management, authentication, authorisation, and user preference APIs are outside the current scope.
+The financial data API is reporting-period based. One data request returns the complete reported, calculated, and AI analysis dataset for one selected period. A separate document endpoint returns source-document metadata and server-hosted download links.
 
-Each category API returns data for one reporting period only. The backend does not provide separate comparison endpoints or return previous-period and change fields.
+The response always contains:
 
-When the frontend needs a comparison, it requests the same category for two equivalent periods and compares the two single-period responses. For example:
+- `period`.
+- `growth`.
+- `profitability`.
+- `liquidity`.
+- `capital`.
+- `analytics`.
 
-~~~http
-GET /api/v1/data/growth?period=HY2026
-GET /api/v1/data/growth?period=HY2025
-~~~
-
-The frontend must compare full-year values only with full-year values and half-year values only with half-year values. Point-in-time balances may be compared when their reporting dates remain visible.
-
-## 2. Endpoint Summary
+## 2. Endpoints
 
 | Method | Endpoint | Purpose |
 |---|---|---|
-| GET | /api/v1/reporting-periods | Return periods available for frontend selection |
-| GET | /api/v1/data/growth?period={periodCode} | Return Growth data for one period |
-| GET | /api/v1/data/profitability?period={periodCode} | Return Profitability data for one period |
-| GET | /api/v1/data/liquidity?period={periodCode} | Return Liquidity data for one period |
-| GET | /api/v1/data/capital?period={periodCode} | Return Capital data for one period |
+| GET | `/api/v1/reporting-periods` | Return available periods |
+| GET | `/api/v1/data?period={code}` | Return the complete dataset for one period |
+| GET | `/api/v1/data/documents` | Return source-document metadata and download links |
+| GET | `/api/v1/data/documents/{id}/download` | Download one locally stored source document |
 
-The four category endpoints can be requested independently and in parallel.
+The frontend requests two complete period responses when it needs a comparison.
 
-## 3. Common Response Objects
+~~~http
+GET /api/v1/data?period=FY2025
+GET /api/v1/data?period=FY2024
+~~~
 
-### 3.1 Reporting Period
+## 3. Reporting Period Object
 
-~~~jsonc
+~~~json
 {
   "code": "HY2026",
   "label": "Half Year 2026",
@@ -41,54 +41,11 @@ The four category endpoints can be requested independently and in parallel.
 }
 ~~~
 
-Supported period types are FULL_YEAR and HALF_YEAR. Additional period types should be added only when the source data supports them.
+## 4. Reporting Periods
 
-### 3.2 Metric Value
+### GET `/api/v1/reporting-periods`
 
-Every financial or operating value returned by a category API must use this structure:
-
-~~~jsonc
-{
-  "value": 354813,
-  "status": "REPORTED",
-  "unit": "EUR",
-  "comments": null,
-  "source": {
-    "documentId": 12,
-    "documentName": "HY2026 Interim Results",
-    "page": 4,
-    "url": null
-  }
-}
-~~~
-
-Allowed status values are:
-
-- REPORTED
-- CALCULATED
-- ESTIMATED
-
-Initial units include:
-
-- EUR
-- PERCENT
-- PERCENTAGE_POINT
-- COUNT
-- RATIO
-
-A CALCULATED value requires its formula in comments. An ESTIMATED value requires its estimation basis and assumptions in comments. Unavailable data must be omitted or explicitly identified as unavailable; it must not be returned as zero.
-
-If the frontend calculates a change between two API responses, the displayed change must be labelled as Calculated.
-
-## 4. Reporting Periods API
-
-### GET /api/v1/reporting-periods
-
-Returns the reporting periods that can be selected by the frontend.
-
-Response template:
-
-~~~jsonc
+~~~json
 {
   "periods": [
     {
@@ -111,202 +68,136 @@ Response template:
 }
 ~~~
 
-The frontend uses period type to prevent invalid full-year and half-year comparisons.
+## 5. Complete Period Data
 
-## 5. Growth Data API
+### GET `/api/v1/data?period=FY2025`
 
-### GET /api/v1/data/growth?period={periodCode}
-
-Returns Growth data for one selected reporting period.
-
-Response template:
-
-~~~jsonc
+~~~json
 {
-  "period": {},
-  "revenue": {},
-  "customers": {
-    "total": {},
-    "enterpriseTotal": {},
-    "byCustomerSegment": [
-      {
-        "segment": "ENTERPRISE | INDEPENDENT | RND",
-        "metric": {}
-      }
-    ]
+  "period": {
+    "code": "FY2025",
+    "label": "Full Year 2025",
+    "type": "FULL_YEAR",
+    "startDate": "2024-07-01",
+    "endDate": "2025-06-30"
   },
-  "revenueMix": {
-    "byCustomerSegment": [
-      {
-        "code": "ENTERPRISE",
-        "label": "Enterprise",
-        "metric": {}
-      }
-    ],
-    "bySolution": [
-      {
-        "code": "ERA",
-        "label": "ERA",
-        "metric": {}
-      }
-    ],
-    "byGeography": [
-      {
-        "code": "IRELAND",
-        "label": "Ireland",
-        "metric": {}
-      }
-    ]
-  },
-  "acvBySolution": [
-    {
-      "solution": "SOIL | TERRAIN | ERA",
-      "metric": {}
+  "growth": {
+    "revenue": 836991.0,
+    "calculated": {
+      "revenueGrowth": 21.6
     }
-  ],
-  "salesPipeline": {
-    "closedValue": {},
-    "openValue": {},
-    "enterpriseCustomers": {}
+  },
+  "profitability": {
+    "grossProfit": 648450.0,
+    "grossMargin": 77.5,
+    "operatingLoss": -633694.0,
+    "costOfSales": -188541.0,
+    "administrativeExpenses": -1286058.0,
+    "calculated": {
+      "grossMargin": 77.474,
+      "operatingMargin": -75.711,
+      "costOfSalesRatio": 22.526,
+      "administrativeExpenseRatio": 153.664
+    }
+  },
+  "liquidity": {
+    "cashBalance": 140135.0,
+    "operatingCashFlow": -374820.0,
+    "workingCapitalMovement": 212467.0,
+    "currentAssets": 263138.0,
+    "currentLiabilities": -243846.0,
+    "netCurrentPosition": 19292.0,
+    "capitalExpenditure": -4451.0,
+    "calculated": {
+      "operatingCashFlowMargin": -44.782,
+      "freeCashFlow": -379271.0,
+      "freeCashFlowMargin": -45.314,
+      "currentRatio": 1.079,
+      "cashRatio": 0.575
+    }
+  },
+  "capital": {
+    "bankDebt": 83655.0,
+    "loanMovement": 93767.0,
+    "interestExpense": -2074.0,
+    "netAssetPosition": -15575.0,
+    "calculated": {
+      "netCash": 56480.0
+    }
+  },
+  "analytics": {
+    "growthAnalytics": "Revenue increased against FY2024.",
+    "profitabilityAnalytics": "Gross margin improved and operating loss decreased.",
+    "liquidityAnalytics": "Operating cash outflow improved, while closing cash declined.",
+    "capitalAnalytics": "The period closed with bank debt and a negative net asset position.",
+    "totalAnalytics": "Revenue and gross margin improved, while losses and negative operating cash flow remained material."
   }
 }
 ~~~
 
-The period field is a Reporting Period object. Every metric field is a Metric Value object.
+## 6. Response Rules
 
-Required returned data:
+- One response represents exactly one reporting period.
+- `period`, `growth`, `profitability`, `liquidity`, `capital`, and `analytics` are always present.
+- Every category has a fixed set of fields.
+- Every reported and calculated metric field is a JSON number or null.
+- Missing numeric data is returned as null, never zero.
+- Every category returns calculated values inside a `calculated` object, including categories with only one calculated field.
+- Calculated fields are null when their required inputs are unavailable.
+- Reported and calculated gross margin values remain distinguishable by their object location.
+- Monetary values use EUR base units.
+- Percentages use displayed percentage values.
+- Accounting deductions retain negative signs.
+- Every `analytics` field is a JSON string or null.
+- AI analysis remains structurally separate from reported and calculated numeric values.
+- A missing period returns HTTP 404.
+- An invalid or blank period code returns HTTP 400.
 
-- Revenue.
-- Total customer count, enterprise customer count, and customer mix.
-- Revenue mix by each supported customer segment, solution, and geography.
-- ACV by solution.
-- Closed pipeline, open pipeline, and related enterprise customer count.
+## 7. Comparison Rules
 
-Revenue growth is not returned. The frontend calculates it from revenue values obtained from two equivalent-period responses.
+- Compare FY2024 only with FY2025.
+- Compare HY2025 only with HY2026.
+- Do not compare full-year performance values with half-year performance values.
+- The frontend obtains comparisons by requesting two complete period responses.
+- Point-in-time balances retain each response's exact period end date.
+- Treat null as unavailable and never as zero.
+- Preserve the meaning of negative losses, expenses, and cash flows.
+- Avoid claims based on ignored historical references or excluded metrics.
+- Return null for a category analysis when the available data are insufficient.
+- Avoid recommendations, forecasts, or unsupported causal claims.
 
-## 6. Profitability Data API
+An AI analysis failure must not roll back or invalidate successfully stored reported and calculated data.
 
-### GET /api/v1/data/profitability?period={periodCode}
+## 8. Source Documents
 
-Returns Profitability data for one selected reporting period.
+### GET `/api/v1/data/documents`
 
-Response template:
-
-~~~jsonc
+~~~json
 {
-  "period": {},
-  "grossProfit": {},
-  "grossMargin": {},
-  "operatingLoss": {},
-  "operatingMargin": {},
-  "costOfSales": {},
-  "administrativeExpenses": {},
-  "rndIntensity": {}
-}
-~~~
-
-Required returned data:
-
-- Gross profit.
-- Gross margin.
-- Operating loss.
-- Operating margin.
-- Cost of sales.
-- Administrative expenses.
-- R&D intensity.
-
-The frontend can compare a metric only when both selected periods return the same field with compatible units and definitions.
-
-## 7. Liquidity Data API
-
-### GET /api/v1/data/liquidity?period={periodCode}
-
-Returns Liquidity data for one selected reporting period.
-
-Response template:
-
-~~~jsonc
-{
-  "period": {},
-  "cashBalance": {},
-  "operatingCashFlow": {},
-  "freeCashFlow": {},
-  "workingCapitalMovement": {},
-  "currentAssets": {},
-  "currentLiabilities": {},
-  "netCurrentPosition": {},
-  "freeCashFlowBridge": {
-    "operatingCashFlow": {},
-    "capitalExpenditure": {},
-    "freeCashFlow": {}
-  }
-}
-~~~
-
-Required returned data:
-
-- Cash balance.
-- Operating cash flow.
-- Free cash flow.
-- Working capital movement.
-- Current assets.
-- Current liabilities.
-- Net current position.
-- Inputs and result for the free cash flow calculation bridge.
-
-A cash balance is a point-in-time value. The frontend must retain the reporting dates from both period objects when comparing two balances.
-
-## 8. Capital Data API
-
-### GET /api/v1/data/capital?period={periodCode}
-
-Returns Capital data for one selected reporting period.
-
-Response template:
-
-~~~jsonc
-{
-  "period": {},
-  "bankDebt": {},
-  "loanMovement": {},
-  "interestExpense": {},
-  "equityFinancing": {},
-  "netCash": {},
-  "netAssetPosition": {},
-  "contingentConsideration": {},
-  "strategicTargets": [
+  "documents": [
     {
-      "code": "REVENUE_CAGR",
-      "label": "Revenue CAGR",
-      "actual": {},
-      "target": {},
-      "operator": "GREATER_THAN_OR_EQUAL | LESS_THAN",
-      "targetPeriod": "FY2030"
+      "name": "Senus PLC FY2025 Annual Results.pdf",
+      "type": "ANNUAL_RESULTS",
+      "publicationDate": "2025-12-18",
+      "aiSummary": "FY2025 annual results with FY2024 formal comparative values.",
+      "downloadUrl": "/api/v1/data/documents/12/download"
     }
   ]
 }
 ~~~
 
-Required returned data:
+Document response rules:
 
-- Bank debt and loan movements.
-- Interest expense.
-- Equity financing.
-- Net cash.
-- Net asset position.
-- Contingent consideration.
-- Actual and target values for each supported Senus 2030 strategic measure.
+- `name` comes from `source_documents.name`.
+- `type` comes from `source_documents.document_type`.
+- `publicationDate` and `aiSummary` are a JSON string or null.
+- `downloadUrl` is a server-relative URL or null when no readable local file is available.
+- The response must not expose `source_documents.local_path`.
+- Documents are ordered by publication date descending, with creation time descending as the fallback order.
 
-Strategic target actual and target values remain in this response because they represent target assessment rather than reporting-period comparison.
+### GET `/api/v1/data/documents/{id}/download`
 
-## 9. Response Rules
-
-- Each category endpoint returns one reporting period only.
-- Category responses must not contain previous-period or period-change fields.
-- The frontend requests two single-period responses when it needs a comparison.
-- Income statement and cash-flow comparisons must use equivalent period types.
-- Point-in-time comparisons must preserve exact reporting dates.
-- Every returned value must include its unit, status, and source.
-- Calculations and estimates must remain explainable from the response.
-- Unsupported fields should be omitted or explicitly marked unavailable; they must never be returned as zero.
-- API DTOs and database entities do not need a one-to-one structure.
+- The server resolves the file from the stored document ID and never accepts a filesystem path from the client.
+- A missing document or unavailable local file returns HTTP 404.
+- The response uses `Content-Disposition: attachment` with a safe filename derived from the stored document name.
+- The response uses the detected media type, or `application/octet-stream` when the media type is unknown.

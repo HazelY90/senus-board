@@ -2,172 +2,125 @@
 
 ## 1. Design Approach
 
-The dashboard should prioritise clear current-period performance and direct period-on-period comparison. The available financial history is limited, so KPI cards, paired comparisons, composition charts, calculation bridges, and detail tables are more appropriate than conventional long-term line charts.
+The dashboard presents four fixed category views from each complete period response:
 
-The frontend should request the four data categories independently:
+- Growth.
+- Profitability.
+- Liquidity.
+- Capital.
 
-- Growth
-- Profitability
-- Liquidity
-- Capital
+The available history supports paired period comparisons rather than long trend lines. The frontend requests one complete period dataset containing all four categories and AI analysis. It requests a second equivalent period dataset when comparison is needed.
 
-All user groups can access all four categories. The frontend changes only their display order according to the selected user type.
+## 2. Common Display Rules
 
-Each category should follow a consistent page structure:
-
-1. Three or four headline KPI cards.
-2. One primary comparison or composition chart.
-3. One supporting visual where it adds useful context.
-4. A detailed data table for exact values, value status, and source access.
-
-## 2. Display Format Selection
-
-| Data characteristic | Recommended format | Example |
-|---|---|---|
-| A single current value | KPI card | Cash balance or bank debt |
-| Two comparable periods | Paired bar chart or comparison card | HY2025 revenue versus HY2026 revenue |
-| Current value, previous value, and change | KPI comparison card | Revenue with year-on-year growth |
-| Several business categories | Horizontal bar chart | ACV by solution |
-| Percentage composition | 100% stacked bar chart | Revenue mix |
-| Actual value against a target | Target indicator or progress bar | Enterprise customer target |
-| A calculation relationship | Waterfall chart or calculation detail | Operating cash flow less capital expenditure equals free cash flow |
-| Several detailed values | Data table | Current assets and current liabilities |
-| Data origin and value classification | Badge and detail popover | Reported, Calculated, or Estimated |
-
-Every displayed value must be labelled as `Reported`, `Calculated`, or `Estimated`. A `Calculated` value should expose its formula and inputs. An `Estimated` value should expose its method, assumptions, and calculation date.
+- Compare FY2024 with FY2025.
+- Compare HY2025 with HY2026.
+- Do not compare a full year with a half year.
+- Display the period end date for balance-sheet values.
+- Hide a missing optional visual or show `Unavailable`; never display a missing value as zero.
+- Use EUR formatting for monetary values and percentage formatting for gross margin.
+- Preserve negative accounting signs in cards, charts, and tables.
 
 ## 3. Growth
 
-### 3.1 Headline KPI Cards
+Growth contains revenue only.
 
-The initial cards should show:
+The page should use:
 
-- Revenue
-- Revenue growth
-- Customer count
-- Open sales pipeline
+- A revenue KPI card for the selected period.
+- A paired bar chart for the selected period and its equivalent prior period.
+- A calculated percentage change displayed by the frontend when both revenue values are present.
 
-Each card should include the current value, the comparable period where available, the change, and the value classification.
-
-### 3.2 Revenue Comparison
-
-Revenue should use a paired bar chart rather than a line chart. Full-year and half-year comparisons must be kept separate:
-
-- FY2024 versus FY2025
-- HY2025 versus HY2026
-
-The four periods must not be connected as one continuous series because full-year and half-year values use different reporting durations.
-
-### 3.3 Revenue and Customer Mix
-
-Revenue mix should use a 100% stacked bar chart. This format makes the Enterprise, Independent, and R&D proportions easy to compare and works well on smaller screens.
-
-Customer mix should use a horizontal bar chart to compare customer counts across the same categories.
-
-### 3.4 ACV by Solution
-
-ACV for Soil, Terrain, and ERA should use a horizontal bar chart. This is a category comparison and does not require a long time series.
-
-### 3.5 Pipeline
-
-Closed and open pipeline values should appear as KPI cards or a segmented horizontal bar. The visual must distinguish completed sales from potential sales and must not imply that the open pipeline is recognised revenue.
+Revenue growth may be loaded from `calculated_growth` after the backend resolves the equivalent prior period. It must be labelled as calculated.
 
 ## 4. Profitability
 
-### 4.1 Headline KPI Cards
+The page should show:
 
-The initial cards should show:
+- Gross profit.
+- Gross margin.
+- Operating loss.
+- Cost of sales.
+- Administrative expenses.
 
-- Gross profit
-- Gross margin
-- Operating loss
-- R&D intensity
+Gross profit, gross margin, and operating loss are the headline cards. A paired bar chart may compare gross profit and operating loss. Cost of sales and administrative expenses belong in a compact detail table.
 
-### 4.2 Comparable-Period Charts
+A larger operating loss must not be styled as a positive improvement.
 
-Gross margin and operating loss can use paired bar charts for FY2024 versus FY2025 or HY2025 versus HY2026. Operating loss should use clear labels and colour treatment so that a larger loss is not presented as a positive result.
-
-### 4.3 Detailed Profitability Table
-
-The table should contain:
-
-| Metric | Current period | Comparable period | Change | Value status |
-|---|---:|---:|---:|---|
-| Revenue | Value | Value | Percentage change | Reported |
-| Gross profit | Value | Value | Percentage change | Reported |
-| Gross margin | Value | Value | Percentage-point change | Calculated |
-| Operating loss | Value | Value | Percentage change | Reported |
-
-The table provides exact values while the chart provides a faster visual comparison. A separate chart is not required for every metric.
+Calculated gross margin, operating margin, cost-of-sales ratio, and administrative-expense ratio may appear in the detail table. Reported gross margin and calculated gross margin must use distinct labels when both are shown.
 
 ## 5. Liquidity
 
-### 5.1 Headline KPI Cards
+The page should show:
 
-The initial cards should show:
+- Cash balance.
+- Operating cash flow.
+- Working capital movement.
+- Current assets.
+- Current liabilities.
+- Net current position.
+- Capital expenditure.
 
-- Cash balance
-- Operating cash flow
-- Free cash flow
-- Net current position
+Cash balance, operating cash flow, and net current position are the headline cards. Current assets, current liabilities, and net current position should use a balance-sheet detail table. Working capital movement and capital expenditure may be omitted from a comparison visual when either period is null.
 
-### 5.2 Free Cash Flow Calculation
-
-A waterfall chart can explain the free cash flow calculation:
-
-```text
-Operating cash flow - Capital expenditure = Free cash flow
-```
-
-This visual explains a calculation relationship and therefore remains useful without a long time series.
-
-### 5.3 Liquidity Detail
-
-Current assets, current liabilities, and the net current position should use a compact table or horizontal comparison bars. A table is preferable when accounting adjustments or contingent consideration need to be explained precisely.
-
-Cash balance may be shown across several reporting dates, but each point must be labelled with its exact reporting date because it is a point-in-time balance.
+Calculated operating-cash-flow margin, free cash flow, free-cash-flow margin, current ratio, and cash ratio may appear below the reported liquidity values. Every calculated value must expose its formula and remain unavailable when an input is missing.
 
 ## 6. Capital
 
-### 6.1 Headline KPI Cards
+The page should show:
 
-The initial cards should show:
+- Bank debt.
+- Loan movement.
+- Interest expense.
+- Net asset position.
 
-- Bank debt
-- Equity financing
-- Net cash
-- Contingent consideration
+Bank debt and net asset position are the headline cards. Loan movement and interest expense should appear in a financing detail table. A missing bank debt value must be shown as unavailable unless the source explicitly reports zero debt.
 
-### 6.2 Strategic Targets
+Net cash may be displayed as a calculated KPI when both cash balance and bank debt are available.
 
-Senus 2030 targets should use target indicators or progress bars where progress can be interpreted meaningfully. Suitable examples include enterprise customer count and Enterprise ACV.
+## 7. Responsive Layout
 
-Revenue CAGR should show the actual value beside the target rather than treating `actual / target` as completion progress. A growth-rate target is not a cumulative task and a simple completion percentage could be misleading.
+Each category follows the same layout:
 
-### 6.3 Financing Detail
+1. Two or three headline KPI cards.
+2. One paired-period comparison chart when comparable values exist.
+3. One detailed table containing every available field.
 
-A table should show bank debt, equity financing, interest expense, net cash, and contingent consideration together with period and value status.
+On narrow screens, KPI cards and comparison bars stack vertically. Tables may scroll horizontally but must keep metric labels visible.
 
-## 7. Reporting-Period Rules
+## 8. User-Type Ordering
 
-The frontend must apply the following comparison rules:
+| User type | First | Second | Third | Fourth |
+|---|---|---|---|---|
+| Management | Growth | Profitability | Liquidity | Capital |
+| Board | Capital | Liquidity | Growth | Profitability |
+| Equity Investors | Capital | Growth | Profitability | Liquidity |
+| Credit Providers | Liquidity | Capital | Profitability | Growth |
 
-- Compare FY2024 only with FY2025.
-- Compare HY2025 only with HY2026.
-- Do not connect full-year and half-year income or cash-flow values in one continuous trend line.
-- Point-in-time balance sheet values may be displayed by reporting date, provided that the dates and period types remain visible.
-- Percentage-point changes and percentage changes must be labelled differently.
+All categories remain accessible regardless of the selected user type.
 
-The available history is sufficient for paired comparisons, composition charts, category charts, target indicators, calculation visuals, KPI cards, and detailed tables. It is not sufficient to support strong claims about long-term trends.
+## 9. AI Analysis
 
-## 8. Recommended Visual Balance
+The frontend reads `analytics` from the complete `/api/v1/data?period={code}` response after loading the selected period.
 
-The page should use approximately:
+- Growth displays `growthAnalytics`.
+- Profitability displays `profitabilityAnalytics`.
+- Liquidity displays `liquidityAnalytics`.
+- Capital displays `capitalAnalytics`.
+- The period overview displays `totalAnalytics`.
 
-- 60% KPI cards
-- 25% charts
-- 15% detailed tables
+Analysis text must be labelled as AI-generated. A null analysis field is omitted or shown as unavailable. AI analysis must not be styled as a reported fact, calculated metric, forecast, or recommendation.
 
-This balance keeps the dashboard easy to scan while preserving access to exact values and their provenance. The design should emphasise current performance and comparable-period movement rather than creating an artificial long-term trend from a small number of observations.
+## 10. Source Documents
 
-The data endpoints and response templates required by this frontend design are defined in [APIDesign.md](APIDesign.md).
+The frontend loads the source-document list from `GET /api/v1/data/documents`.
+
+Each document entry displays:
+
+- Document name.
+- Document type.
+- Publication date, or `Unavailable` when it is null.
+- AI summary, or `Unavailable` when it is null.
+- A download action when `downloadUrl` is not null.
+
+The download action uses the server-provided URL without constructing or exposing a filesystem path. Documents appear in the API order, with the newest publication date first.

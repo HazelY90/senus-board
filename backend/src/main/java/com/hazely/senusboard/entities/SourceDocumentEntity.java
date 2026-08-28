@@ -15,7 +15,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.Instant;
 import java.time.LocalDate;
 
-/** Stores source-document metadata used for data provenance. */
+/** Stores source-document metadata and its AI summary. */
 @Entity
 @Table(
         name = "source_documents",
@@ -47,6 +47,9 @@ public class SourceDocumentEntity {
 
     @Column(name = "file_hash", nullable = false, length = 128)
     private String fileHash;
+
+    @Column(name = "ai_summary", columnDefinition = "TEXT")
+    private String aiSummary;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
