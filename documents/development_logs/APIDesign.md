@@ -17,16 +17,16 @@ The response always contains:
 
 | Method | Endpoint | Purpose |
 |---|---|---|
-| GET | `/api/v1/reporting-periods` | Return available periods |
-| GET | `/api/v1/data?period={code}` | Return the complete dataset for one period |
+| GET | `/api/v1/data/reporting-periods` | Return available periods |
+| GET | `/api/v1/data/{period}` | Return the complete dataset for one period |
 | GET | `/api/v1/data/documents` | Return source-document metadata and download links |
 | GET | `/api/v1/data/documents/{id}/download` | Download one locally stored source document |
 
 The frontend requests two complete period responses when it needs a comparison.
 
 ~~~http
-GET /api/v1/data?period=FY2025
-GET /api/v1/data?period=FY2024
+GET /api/v1/data/FY2025
+GET /api/v1/data/FY2024
 ~~~
 
 ## 3. Reporting Period Object
@@ -43,7 +43,7 @@ GET /api/v1/data?period=FY2024
 
 ## 4. Reporting Periods
 
-### GET `/api/v1/reporting-periods`
+### GET `/api/v1/data/reporting-periods`
 
 ~~~json
 {
@@ -70,7 +70,7 @@ GET /api/v1/data?period=FY2024
 
 ## 5. Complete Period Data
 
-### GET `/api/v1/data?period=FY2025`
+### GET `/api/v1/data/FY2025`
 
 ~~~json
 {

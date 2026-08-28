@@ -1,60 +1,50 @@
-# Development Plan
+# 1. Requirements Analysis
 
-## 1. Requirements and Source Validation
+- Analyse the assignment document to identify the product goals, required capabilities, constraints, and deliverables.
+- Review the Senus investor relations website and its source documents to determine what financial and operating data are available.
+- Verify the available reporting periods, metrics, source locations, and data limitations.
+- Identify the target users and define the financial information most relevant to each user type.
+- Decide which metrics, comparisons, insights, and source references the Board Report should display.
+- Record the detailed findings in [Requirements.md](Requirements.md) to guide the data model, backend APIs, AI extraction workflow, and frontend design.
 
-- Validate FY2024, FY2025, HY2025, and HY2026 source values.
-- Retain only fields that are sufficiently stable across annual and half-year disclosures.
-- Record excluded metrics and the reason for exclusion in [Requirements.md](Requirements.md).
+# 2. Technology Stack Selection
 
-## 2. Design Alignment
+- **Frontend:** TypeScript, Next.js, and React
+- **Backend:** Java, Spring Boot, and REST APIs
+- **Database:** MySQL
+- **Cloud:** AWS EC2 for application deployment and Amazon RDS for MySQL
+- **AI:** OpenAI API for structured financial data extraction and Board-level commentary
+- **Document Processing:** Apache PDFBox for extracting text from PDF documents, subject to validation against the available source files
+- **Charts:** Recharts for interactive financial visualisations, subject to validation during frontend development
 
-- Define the four fixed frontend categories in [FrontendDesign.md](FrontendDesign.md).
-- Define one complete single-period API response in [APIDesign.md](APIDesign.md).
-- Define the period-based category schema in [DatabaseDesign.md](DatabaseDesign.md).
-- Define direct fixed-schema extraction in [AIExtractionJob.md](AIExtractionJob.md).
+The application will use a single repository containing the frontend and backend. The main application stack will remain Java and TypeScript unless a clear technical requirement justifies another runtime or service.
 
-## 3. Database Work
+# 3. Frontend Design
 
-- Use `reporting_periods` and `source_documents` as reference tables.
-- Use `ingestion_runs` as source-level operational audit data.
-- Add nullable `ai_summary` to `source_documents`.
-- Create `growth`, `profitability`, `liquidity`, and `capital`.
-- Create `calculated_growth`, `calculated_profitability`, `calculated_liquidity`, and `calculated_capital`.
-- Add a unique `reporting_period_id` foreign key to every reported and calculated category table.
-- Create `analytics` with one unique `reporting_period_id` row per period.
+- Define the data, comparisons, context, and provenance that each frontend category needs to display before designing the persistence model.
+- Select an appropriate presentation format for each type of data, including KPI cards, paired-period comparisons, composition charts, calculation visuals, target indicators, and detail tables.
+- Define category-specific response structures for Growth, Profitability, Liquidity, and Capital based on the selected frontend components.
+- Use these frontend data requirements to determine the backend API contracts, database entities, relationships, and stored attributes.
+- Record the detailed design decisions in [FrontendDesign.md](FrontendDesign.md) to guide database and backend development.
 
-## 4. Backend Work
+# 4. API Design
 
-- Define fixed period category extraction objects.
-- Add primary-period and formal-comparative-period selection rules.
-- Add tests that ignore incidental historical dates and values.
-- Add entities and repositories for the four category tables.
-- Upsert category rows directly during ingestion.
-- Apply later non-null values while retaining existing fields when a later extraction returns null.
-- Add a period-based query service and one complete period data controller.
-- Add a source-document list endpoint with metadata and server-hosted download links.
-- Add an ID-based source-document download endpoint without exposing local filesystem paths.
-- Add a calculation service with explicit formulas, null handling, denominator checks, and comparable-period resolution.
-- Store a source-level AI summary during document extraction.
-- Add a complete-dataset AI analysis request after all extraction and calculation work commits.
-- Validate and upsert period-level `analytics` rows without rolling back stored numeric data on analysis failure.
-- Add validation and repository tests.
+- Derive the backend data contracts from the data required by the four frontend categories.
+- Define independent single-period endpoints for Growth, Profitability, Liquidity, and Capital so the frontend can request category data in parallel.
+- Define common response objects for reporting periods, metric values, value classifications, units, comments, and source references.
+- Keep period comparison logic in the frontend by allowing it to request the same category for two equivalent periods.
+- Record the endpoints, response templates, and response rules in [APIDesign.md](APIDesign.md) to guide database and backend development.
 
-## 5. Frontend Work
+# 5. Database Design
 
-- Implement reporting-period selection.
-- Load all four categories and AI analysis from one complete period response.
-- Implement the four category views.
-- Compare only equivalent period types.
-- Handle null values without converting them to zero.
-- Add responsive cards, paired comparison charts, and detail tables.
-- Display category and total AI analysis with an explicit AI-generated label.
-- Display source-document metadata, AI summaries, and available download actions.
+- Derive the persistence requirements from the single-period API contracts without copying API DTOs directly into database tables.
+- Separate reporting periods, metrics metadata, dimensions, source documents, validated metric values, strategic targets, and AI extraction staging data, while storing calculation metadata directly with each metric value.
+- Store scalar and breakdown values in a shared metric model so the four frontend categories can be assembled without duplicate category tables.
+- Store category and unit metadata in metrics, while preserving each value's source, classification, explanatory comments, and validation state.
+- Record the detailed schema and API mapping in [DatabaseDesign.md](DatabaseDesign.md) to guide Entity, repository, and service development.
 
-## 6. Deployment Work
+# 6. Backend Development
 
-- Back up the target database before schema deployment.
-- Deploy the database schema separately from ingestion.
-- Run ingestion after schema validation succeeds.
-- Verify the complete period endpoint against extracted, calculated, and AI analysis values.
-- Verify document listing, unavailable-file handling, safe filenames, and local downloads.
+# 7. Frontend Development
+
+# 8. Cloud Deployment
