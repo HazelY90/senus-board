@@ -123,11 +123,6 @@
             <version>0.13.0</version>
         </dependency>
         <dependency>
-            <groupId>com.stripe</groupId>
-            <artifactId>stripe-java</artifactId>
-            <version>29.0.0</version>
-        </dependency>
-        <dependency>
             <groupId>me.paulschwarz</groupId>
             <artifactId>springboot4-dotenv</artifactId>
             <optional>true</optional>
@@ -145,11 +140,15 @@
                 <artifactId>flyway-maven-plugin</artifactId>
                 <version>${flyway.version}</version>
                 <configuration>
-                    <!-- Share the local database configuration with Spring Boot to keep credentials out of pom.xml. -->
+                    <!-- Load local Flyway settings without exposing credentials in the POM. -->
                     <configFiles>
                         <configFile>${project.basedir}/.env</configFile>
                     </configFiles>
+                    <locations>
+                        <location>filesystem:src/main/resources/db/migration</location>
+                    </locations>
                     <cleanDisabled>false</cleanDisabled>
+                    <validateMigrationNaming>true</validateMigrationNaming>
                 </configuration>
             </plugin>
             <plugin>

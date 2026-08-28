@@ -1,0 +1,19 @@
+spring:
+  main:
+    web-application-type: none
+
+  flyway:
+    enabled: false
+
+app:
+  openai:
+    api-key: ${OPENAI_API_KEY}
+    model: gpt-5.6-luna
+    max-output-tokens: 20000
+
+  job:
+    ingestion:
+      enabled: true
+      source-url: https://investor-relations.assiduous.tech/senus
+      document-dir: src/main/resources/documents
+      max-file-bytes: 52428800
