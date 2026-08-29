@@ -21,3 +21,15 @@ spring:
 
 app:
   baseUrl: ${BASEURL:.}
+  auth:
+    emailDomains:
+      - senus.ie
+      - assiduous.ie
+      - investor.ie
+  admin:
+    bootstrap:
+      enabled: ${ADMIN_BOOTSTRAP_ENABLED:false}
+      email: ${ADMIN_BOOTSTRAP_EMAIL:}
+      password: ${ADMIN_BOOTSTRAP_PASSWORD:}
+      name: ${ADMIN_BOOTSTRAP_NAME:}
+      organization: ${ADMIN_BOOTSTRAP_ORGANIZATION:}

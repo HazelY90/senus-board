@@ -6,6 +6,9 @@ src/main/resources/documents/*
 !**/src/main/**/target/
 !**/src/test/**/target/
 
+/tmp
+AGENTS.md
+
 ### STS ###
 .apt_generated
 .classpath

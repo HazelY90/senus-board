@@ -45,6 +45,10 @@ The application will use a single repository containing the frontend and backend
 
 # 6. Backend Development
 
+- Implement the database migration based on [DatabaseDesign.md](DatabaseDesign.md).
+- Design and implement the AI extraction workflow and extraction rules documented in [AIExtractionJob.md](AIExtractionJob.md).
+- Design and implement user authentication based on [AuthenticationDesign.md](AuthenticationDesign.md).
+
 # 7. Frontend Development
 
 # 8. Cloud Deployment
