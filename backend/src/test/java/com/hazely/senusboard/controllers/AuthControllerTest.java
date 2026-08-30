@@ -27,6 +27,7 @@ import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -121,6 +122,39 @@ class AuthControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.accessToken").value("new-access-token"))
                 .andExpect(jsonPath("$.refreshToken").doesNotExist());
+    }
+
+    @Test
+    void logoutExpiresRefreshCookie() throws Exception {
+        mvc.perform(post("/api/v1/auth/logout"))
+                .andExpect(status().isNoContent())
+                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString(
+                        "refreshToken="
+                )))
+                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString(
+                        "Max-Age=0"
+                )))
+                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString(
+                        "Path=/api/v1/auth"
+                )))
+                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString(
+                        "HttpOnly"
+                )));
+    }
+
+    @Test
+    void deleteRemovesAuthenticatedAccount() throws Exception {
+        mvc.perform(delete("/api/v1/auth/delete")
+                        .principal(new UsernamePasswordAuthenticationToken(7L, null)))
+                .andExpect(status().isNoContent())
+                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString(
+                        "refreshToken="
+                )))
+                .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString(
+                        "Max-Age=0"
+                )));
+
+        verify(service).delete(7L);
     }
 
     @Test

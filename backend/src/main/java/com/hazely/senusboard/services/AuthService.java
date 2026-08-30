@@ -6,6 +6,7 @@ import com.hazely.senusboard.dtos.LoginRequestDto;
 import com.hazely.senusboard.dtos.RegisterRequestDto;
 import com.hazely.senusboard.dtos.UserDto;
 import com.hazely.senusboard.entities.UserEntity;
+import com.hazely.senusboard.entities.enums.Role;
 import com.hazely.senusboard.entities.enums.Status;
 import com.hazely.senusboard.repositories.UserRepository;
 import com.hazely.senusboard.security.Jwt;
@@ -133,6 +134,23 @@ public class AuthService {
         policy.validatePassword(request.newPassword(), user.getRole());
         user.setPassword(encoder.encode(request.newPassword()));
         userRepo.save(user);
+    }
+
+    /** Permanently deletes the authenticated account. */
+    @Transactional
+    public void delete(Long id) {
+        if (id == null || id <= 0) {
+            throw unauthorized();
+        }
+
+        UserEntity user = userRepo.findById(id).orElseThrow(this::unauthorized);
+        if (user.getRole() == Role.ADMIN) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Admin accounts cannot be deleted through this endpoint"
+            );
+        }
+        userRepo.delete(user);
     }
 
     private String clean(String value) {

@@ -113,6 +113,19 @@ public class AdminService {
         publisher.publishEvent(new AccountStatusEvent(user.getId(), user.getStatus()));
     }
 
+    /** Permanently deletes an ordinary account. */
+    @Transactional
+    public void deleteUser(Long id) {
+        UserEntity user = getUser(id);
+        if (user.getRole() == Role.ADMIN) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Admin accounts cannot be deleted through this endpoint"
+            );
+        }
+        userRepo.delete(user);
+    }
+
     private UserEntity getUser(Long id) {
         if (id == null || id <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User ID must be positive");
