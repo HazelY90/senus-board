@@ -28,6 +28,16 @@ class AuthApiService {
   changePassword(req: ChangePasswordReq) {
     return apiClient.post<void>("/auth/change-password", req, true);
   }
+
+  /** Expires the refresh-token cookie without requiring an access token. */
+  logout() {
+    return apiClient.post<void>("/auth/logout", undefined, false);
+  }
+
+  /** Permanently deletes the authenticated ordinary account. */
+  deleteAccount() {
+    return apiClient.delete<void>("/auth/delete", true);
+  }
 }
 
 /** Shared authentication API service used by authentication features. */

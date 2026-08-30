@@ -1,13 +1,18 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import ChangePasswordModal from "./ChangePasswordModal";
+import DeleteAccountModal from "./DeleteAccountModal";
 import { useAuth } from "../hooks/useAuth";
 import colors from "@/public/colors.json";
 
 /** Displays the current user and reusable account actions in a dropdown menu. */
 export default function ProfileMenu() {
-  const { user } = useAuth();
+  const { logout, user } = useAuth();
+  const router = useRouter();
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [isPasswordOpen, setIsPasswordOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -35,6 +40,20 @@ export default function ProfileMenu() {
   if (!user) return null;
 
   const initial = user.name.trim().charAt(0).toUpperCase() || "U";
+
+  /** Ends the backend session and returns to the public Welcome page. */
+  const signOut = async () => {
+    setNotice(null);
+    setIsLoggingOut(true);
+
+    try {
+      await logout();
+      router.replace("/");
+    } catch (reason) {
+      setNotice(reason instanceof Error ? reason.message : "Logout failed.");
+      setIsLoggingOut(false);
+    }
+  };
 
   return (
     <>
@@ -84,17 +103,19 @@ export default function ProfileMenu() {
                 setIsPasswordOpen(true);
               }}
             />
+            {user.role !== "ADMIN" && (
+              <MenuButton
+                label="Delete account"
+                onClick={() => {
+                  setIsOpen(false);
+                  setIsDeleteOpen(true);
+                }}
+              />
+            )}
             <MenuButton
-              label="Delete account"
-              onClick={() =>
-                setNotice("Delete Account requires a backend endpoint.")
-              }
-            />
-            <MenuButton
-              label="Logout"
-              onClick={() =>
-                setNotice("Logout is deferred until the backend endpoint is available.")
-              }
+              disabled={isLoggingOut}
+              label={isLoggingOut ? "Logging out..." : "Logout"}
+              onClick={signOut}
             />
             {notice && (
               <p className="m-2 rounded-lg bg-amber-50 p-2 text-xs leading-5 text-amber-800">
@@ -108,15 +129,27 @@ export default function ProfileMenu() {
       {isPasswordOpen && (
         <ChangePasswordModal onClose={() => setIsPasswordOpen(false)} />
       )}
+      {isDeleteOpen && (
+        <DeleteAccountModal onClose={() => setIsDeleteOpen(false)} />
+      )}
     </>
   );
 }
 
 /** Renders one consistent action inside the Profile dropdown. */
-function MenuButton({ label, onClick }: { label: string; onClick: () => void }) {
+function MenuButton({
+  disabled = false,
+  label,
+  onClick,
+}: {
+  disabled?: boolean;
+  label: string;
+  onClick: () => void;
+}) {
   return (
     <button
-      className="w-full cursor-pointer rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors hover:bg-slate-100"
+      className="w-full cursor-pointer rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors hover:bg-slate-100 disabled:cursor-wait disabled:opacity-60"
+      disabled={disabled}
       role="menuitem"
       type="button"
       onClick={onClick}

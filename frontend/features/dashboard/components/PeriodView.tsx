@@ -4,27 +4,45 @@ import { useEffect, useState } from "react";
 import DataPage from "./DataPage";
 import MetricSection from "./MetricSection";
 import { getAnalysis, getMetrics } from "../metrics";
-import { getCategoryOrder, periodOptions } from "../config";
+import { getCategoryOrder } from "../config";
 import { useData } from "../hooks/useData";
 import { useAuth } from "@/features/auth/hooks/useAuth";
-import type { PeriodCode } from "@/types/data";
 import { formatDate } from "@/utils/format";
 import colors from "@/public/colors.json";
 
 /** Selects and displays each reporting period within one Dashboard page. */
 export default function PeriodView() {
-  const { loadPeriod, periodData } = useData();
+  const { loadPeriod, loadPeriods, periodData, periods } = useData();
   const { user } = useAuth();
-  const [code, setCode] = useState<PeriodCode>("HY2026");
+  const [code, setCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const data = periodData[code];
+  const defaultPeriod = periods.find((period) => period.isDefault) ?? periods[0];
+  const activeCode = code ?? defaultPeriod?.code ?? null;
+  const data = activeCode ? periodData[activeCode] : undefined;
+  const selected = periods.find((period) => period.code === activeCode);
 
   useEffect(() => {
     let isLive = true;
 
-    if (data) return;
+    if (periods.length > 0) return;
 
-    loadPeriod(code)
+    loadPeriods().catch((reason) => {
+      if (isLive) {
+        setError(reason instanceof Error ? reason.message : "Request failed.");
+      }
+    });
+
+    return () => {
+      isLive = false;
+    };
+  }, [loadPeriods, periods]);
+
+  useEffect(() => {
+    let isLive = true;
+
+    if (!activeCode || data) return;
+
+    loadPeriod(activeCode)
       .catch((reason) => {
         if (isLive) {
           setError(reason instanceof Error ? reason.message : "Request failed.");
@@ -34,7 +52,7 @@ export default function PeriodView() {
     return () => {
       isLive = false;
     };
-  }, [code, data, loadPeriod]);
+  }, [activeCode, data, loadPeriod]);
 
   const order = getCategoryOrder(user?.role);
   const description = data
@@ -42,7 +60,7 @@ export default function PeriodView() {
     : "Select a reporting period to review its complete financial results.";
 
   /** Changes the active period while preserving cached data for previous tabs. */
-  const selectPeriod = (period: PeriodCode) => {
+  const selectPeriod = (period: string) => {
     setError(null);
     setCode(period);
   };
@@ -51,18 +69,18 @@ export default function PeriodView() {
     <DataPage
       description={description}
       eyebrow="Reporting period"
-      title={data?.period.label ?? code}
+      title={data?.period.label ?? selected?.label ?? "Period Reports"}
     >
       <div className="flex flex-wrap gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-        {periodOptions.map((period) => (
+        {periods.map((period) => (
           <button
-            aria-pressed={code === period.code}
+            aria-pressed={activeCode === period.code}
             className="cursor-pointer rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors"
             key={period.code}
             style={{
               backgroundColor:
-                code === period.code ? colors.light_theme : "#f1f5f4",
-              color: code === period.code ? "white" : colors.main_theme,
+                activeCode === period.code ? colors.light_theme : "#f1f5f4",
+              color: activeCode === period.code ? "white" : colors.main_theme,
             }}
             type="button"
             onClick={() => selectPeriod(period.code)}
@@ -75,7 +93,12 @@ export default function PeriodView() {
       {!data ? (
         <DashboardState
           isError={Boolean(error)}
-          message={error ?? `Loading ${code} data...`}
+          message={
+            error ??
+            (activeCode
+              ? `Loading ${activeCode} data...`
+              : "Loading reporting periods...")
+          }
         />
       ) : (
         <>

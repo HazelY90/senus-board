@@ -146,27 +146,6 @@ export default function AuthModal({ mode, onClose, onMode }: AuthModalProps) {
             : "Register with your approved enterprise email address."}
         </p>
 
-        {error && (
-          <p
-            aria-live="polite"
-            className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-            role="alert"
-          >
-            {error}
-          </p>
-        )}
-
-        {isDone && (
-          <p
-            aria-live="polite"
-            className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-800"
-            role="status"
-          >
-            Registration submitted. Your account is pending review, but you can
-            log in immediately.
-          </p>
-        )}
-
         <form className="mt-7 grid gap-5" onSubmit={submit}>
           {!isLogin && (
             <>
@@ -248,8 +227,29 @@ export default function AuthModal({ mode, onClose, onMode }: AuthModalProps) {
             </>
           )}
 
+          {error && (
+            <p
+              aria-live="polite"
+              className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+              role="alert"
+            >
+              {error}
+            </p>
+          )}
+
+          {isDone && (
+            <p
+              aria-live="polite"
+              className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-800"
+              role="status"
+            >
+              Registration submitted. Your account is pending review, but you
+              can log in immediately.
+            </p>
+          )}
+
           <button
-            className="mt-2 h-12 cursor-pointer rounded-xl text-base font-semibold text-white transition-[filter] hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-wait disabled:opacity-65"
+            className="h-12 cursor-pointer rounded-xl text-base font-semibold text-white transition-[filter] hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-wait disabled:opacity-65"
             disabled={isSending}
             style={{ backgroundColor: colors.light_theme }}
             type="submit"

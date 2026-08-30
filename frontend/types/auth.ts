@@ -36,6 +36,15 @@ export type RegisterReq = {
   description?: string;
 };
 
+/** Describes an Admin request that creates an active ordinary account. */
+export type CreateUserReq = {
+  name: string;
+  email: string;
+  password: string;
+  role: Exclude<UserRole, "ADMIN">;
+  organization: string;
+};
+
 /** Describes an authentication response containing a new access token. */
 export type TokenRes = {
   accessToken: string;

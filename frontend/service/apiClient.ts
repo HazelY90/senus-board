@@ -71,6 +71,19 @@ class ApiClient {
     return this.request<T>(path, auth, { ...opts, method: "DELETE" });
   }
 
+  /** Opens a streaming response while preserving token refresh behaviour. */
+  async stream(path: string, auth: boolean, signal: AbortSignal) {
+    if (auth && !this.token) {
+      const token = await this.refresh();
+
+      if (!token) {
+        throw new ApiError(401, { message: "Authentication is required" });
+      }
+    }
+
+    return this.openStream(path, auth, signal);
+  }
+
   /** Executes fetch, attaches credentials, and retries once after a 401. */
   private async send<T>(
     path: string,
@@ -117,6 +130,38 @@ class ApiClient {
     }
 
     return data as T;
+  }
+
+  /** Opens an SSE-compatible fetch response and retries once after a 401. */
+  private async openStream(
+    path: string,
+    auth: boolean,
+    signal: AbortSignal,
+    retry = true,
+  ): Promise<Response> {
+    const headers = new Headers({ Accept: "text/event-stream" });
+
+    if (auth && this.token) {
+      headers.set("Authorization", `Bearer ${this.token}`);
+    }
+
+    const res = await fetch(getUrl(path), {
+      credentials: "include",
+      headers,
+      method: "GET",
+      signal,
+    });
+
+    if (res.status === 401 && auth && retry) {
+      const token = await this.refresh();
+      if (token) return this.openStream(path, auth, signal, false);
+    }
+
+    if (!res.ok) {
+      throw new ApiError(res.status, await readBody(res));
+    }
+
+    return res;
   }
 
   /** Reuses one refresh request across concurrent authentication failures. */

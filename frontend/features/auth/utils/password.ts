@@ -1,7 +1,7 @@
-/** Mirrors the backend ordinary-user password policy for immediate feedback. */
-export function isStrongPassword(password: string) {
+/** Mirrors the backend password policy for immediate role-aware feedback. */
+export function isStrongPassword(password: string, minLength = 10) {
   return (
-    password.length >= 10 &&
+    password.length >= minLength &&
     /[A-Z]/.test(password) &&
     /[a-z]/.test(password) &&
     /[0-9]/.test(password) &&

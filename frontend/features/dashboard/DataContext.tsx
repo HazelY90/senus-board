@@ -3,7 +3,6 @@
 import {
   createContext,
   useCallback,
-  useEffect,
   useMemo,
   useRef,
   useState,
@@ -24,6 +23,7 @@ type DataCtx = {
   loadComparison: (base: string, target: string) => Promise<Comparison>;
   loadDocuments: () => Promise<DataDoc[]>;
   loadPeriod: (code: string) => Promise<PeriodData>;
+  loadPeriods: () => Promise<Period[]>;
   periodData: Record<string, PeriodData>;
   periods: Period[];
 };
@@ -139,11 +139,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
     window.setTimeout(() => URL.revokeObjectURL(url), 0);
   }, []);
 
-  useEffect(() => {
-    // Load navigation metadata once after authenticated Dashboard entry.
-    loadPeriods().catch(() => undefined);
-  }, [loadPeriods]);
-
   const value = useMemo(
     () => ({
       comparisons,
@@ -152,6 +147,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       loadComparison,
       loadDocuments,
       loadPeriod,
+      loadPeriods,
       periodData,
       periods,
     }),
@@ -162,6 +158,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       loadComparison,
       loadDocuments,
       loadPeriod,
+      loadPeriods,
       periodData,
       periods,
     ],
