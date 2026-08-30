@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import PasswordField from "./PasswordField";
 import { isStrongPassword } from "../utils/password";
+import { useAuth } from "../hooks/useAuth";
 import { authApiService } from "@/service/authApiService";
 import colors from "@/public/colors.json";
 
@@ -14,9 +15,11 @@ type ChangePasswordModalProps = {
 export default function ChangePasswordModal({
   onClose,
 }: ChangePasswordModalProps) {
+  const { user } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [isDone, setIsDone] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const minLength = user?.role === "ADMIN" ? 16 : 10;
 
   /** Validates the new password and sends the backend change request. */
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -34,9 +37,9 @@ export default function ChangePasswordModal({
       setError("Passwords do not match.");
       return;
     }
-    if (!isStrongPassword(newPassword)) {
+    if (!isStrongPassword(newPassword, minLength)) {
       setError(
-        "Password must contain at least 10 characters, including uppercase, lowercase, number, and special characters.",
+        `Password must contain at least ${minLength} characters, including uppercase, lowercase, number, and special characters.`,
       );
       return;
     }
@@ -115,14 +118,14 @@ export default function ChangePasswordModal({
             autoComplete="new-password"
             disabled={isSending}
             label="New password"
-            minLength={10}
+            minLength={minLength}
             name="newPassword"
           />
           <PasswordField
             autoComplete="new-password"
             disabled={isSending}
             label="Confirm new password"
-            minLength={10}
+            minLength={minLength}
             name="confirm"
           />
           <button

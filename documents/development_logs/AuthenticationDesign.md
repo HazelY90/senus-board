@@ -25,7 +25,7 @@ Ordinary accounts can be created through either of two controlled flows.
 
 ### 3.1 Registration and Approval
 
-An ordinary user may submit a registration request only with an email address whose domain matches the configured enterprise email-domain allowlist. The frontend validates the email domain before submission, and the backend independently validates it before creating the account. Frontend validation improves feedback but is never treated as a security control.
+An ordinary user may submit a registration request only with an email address whose domain matches the configured enterprise email-domain allowlist. The frontend validates the email format and normalises it to lowercase, while the backend validates the configured domain before creating the account.
 
 A successful registration creates a `PENDING` account. A pending user may authenticate and access protected platform data immediately while waiting for review.
 
@@ -43,7 +43,7 @@ Admin registration is never exposed through the frontend or a public registratio
 
 The initial Admin account must be created through a backend-controlled setup process. Additional Admin access must also require an existing trusted administrative process and must never be granted through ordinary self-registration.
 
-The exact bootstrap mechanism, credential delivery method, and Admin management policy will be defined before implementation.
+The exact bootstrap mechanism, credential delivery method, and Admin management policy remain outside the current application scope.
 
 ## 5. User Schema
 
@@ -84,13 +84,13 @@ A registration request may select one of the four ordinary roles. Registration m
 
 The system maintains a configured allowlist of enterprise email domains. Email addresses are trimmed and normalised to lowercase before comparison. The domain portion after the final `@` must exactly match an allowlisted domain; lookalike suffixes and unconfigured subdomains are rejected.
 
-The frontend performs the same validation for immediate user feedback. The backend repeats the validation for every ordinary account creation request and remains authoritative. A request with a disallowed domain returns a validation error and does not create an account.
+The frontend validates the email format, trims the address, and normalises it to lowercase. The backend applies the domain allowlist to every ordinary account creation request and remains authoritative. A request with a disallowed domain returns a validation error and does not create an account.
 
 ### 6.2 Password Strength
 
 Passwords for the four ordinary user types must contain at least 10 characters. Admin passwords must contain at least 16 characters. Every password must include at least one uppercase letter, one lowercase letter, one number, and one special character.
 
-These requirements apply to registration, Admin-created accounts, initial Admin provisioning, password changes, and credential resets. The frontend may mirror the rules for immediate feedback, but the backend must enforce them before accepting a password.
+These requirements apply to registration, Admin-created accounts, initial Admin provisioning, password changes, and credential resets. The frontend mirrors the applicable role-based rule for immediate feedback, but the backend must enforce it before accepting a password.
 
 ## 7. Authentication and Admin APIs
 
@@ -105,6 +105,7 @@ Authentication endpoints use the `/api/v1/auth` base path. Administrative user-m
 | POST | `/api/v1/auth/logout` | Public | Expire the browser refresh-token cookie |
 | DELETE | `/api/v1/auth/delete` | Access token | Permanently delete the authenticated non-Admin account |
 | POST | `/api/v1/auth/change-password` | Access token | Replace the authenticated user's password after verifying the current password |
+| GET | `/api/v1/auth/events` | Access token | Stream real-time account-access revocation events |
 | GET | `/api/v1/admin/search-user?email={email}` | Admin access token | Find a user by email address |
 | GET | `/api/v1/admin/get-pending` | Admin access token | Return all users awaiting Admin review |
 | POST | `/api/v1/admin/create-user` | Admin access token | Create an active ordinary user without registration review |
@@ -210,15 +211,14 @@ Admin creation and privilege delegation are not exposed through the ordinary use
 
 ### 9.1 Real-Time Account Status Feedback
 
-The backend uses Server-Sent Events (SSE) to notify the connected frontend when an ordinary user's status changes to `REJECTED` or `DISABLED`. The frontend refreshes immediately after receiving the status event so the updated access state is reflected without waiting for the user's next navigation or request.
+The backend uses Server-Sent Events (SSE) to notify the connected frontend when an ordinary user's status changes to `REJECTED` or `DISABLED`. The frontend opens an authenticated streaming fetch to `/api/v1/auth/events` because the endpoint requires the bearer access token. It listens for `account-access-revoked`, reads the status from the JSON event data, clears local authentication, expires the refresh cookie through logout, displays `Access denied`, and returns to the Welcome page. The frontend reconnects after the server timeout or a transient stream failure while the account remains authenticated.
 
 SSE provides real-time user-interface feedback only. Backend account-status validation remains authoritative for every protected request.
 
 ## 10. Deferred Design
 
-The following details will be defined separately in this document before implementation:
+The following policy and operational details remain deferred:
 
-- Access-token and refresh-token lifecycle.
 - Admin bootstrap and recovery procedures.
 - Account reactivation policy.
 - Audit requirements for administrative actions.

@@ -1,15 +1,6 @@
 import type { UserRole } from "@/types/auth";
-import type { PeriodCode } from "@/types/data";
 
 export type CategoryId = "growth" | "profitability" | "liquidity" | "capital";
-
-/** Defines the reporting-period tabs shown within the Dashboard page. */
-export const periodOptions: { code: PeriodCode; label: string }[] = [
-  { code: "FY2024", label: "FY2024" },
-  { code: "FY2025", label: "FY2025" },
-  { code: "HY2025", label: "HY2025" },
-  { code: "HY2026", label: "HY2026" },
-];
 
 /** Supplies display labels and descriptions for each financial category. */
 export const categoryMeta: Record<

@@ -1,4 +1,6 @@
-/** Renders the Admin route entry point. */
+import AdminView from "@/features/admin/components/AdminView";
+
+/** Renders the Admin account-management page. */
 export default function Admin() {
-  return <main>Admin</main>;
+  return <AdminView />;
 }

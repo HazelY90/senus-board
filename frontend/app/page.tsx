@@ -16,7 +16,7 @@ export default function Home() {
   const [mode, setMode] = useState<AuthMode | null>(null);
 
   return (
-    <main className="min-h-screen bg-white">
+    <main className="flex min-h-dvh flex-col bg-white">
       <AppHeader
         actions={
           !isReady ? (
@@ -61,7 +61,7 @@ export default function Home() {
         }
       />
 
-      <section className="mx-auto flex min-h-[calc(100vh-96px)] max-w-[1500px] items-center justify-center px-6 py-20 sm:px-10 lg:px-14">
+      <section className="mx-auto flex min-h-0 w-full max-w-[1500px] flex-1 items-center justify-center px-6 py-12 sm:px-10 sm:py-16 lg:px-14">
         <div className="max-w-6xl text-center">
           <p
             className="mb-5 text-sm font-bold uppercase tracking-[0.22em] sm:text-base"

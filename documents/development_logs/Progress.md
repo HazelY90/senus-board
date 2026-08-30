@@ -48,7 +48,18 @@ The application will use a single repository containing the frontend and backend
 - Implement the database migration based on [DatabaseDesign.md](DatabaseDesign.md).
 - Design and implement the AI extraction workflow and extraction rules documented in [AIExtractionJob.md](AIExtractionJob.md).
 - Design and implement user authentication based on [AuthenticationDesign.md](AuthenticationDesign.md).
+- Complete the backend API implementation according to the contracts and response rules defined in [APIDesign.md](APIDesign.md).
+- Adopt a clear Controller-Service-Entity-Database layered architecture to keep the application maintainable and extensible.
 
 # 7. Frontend Development
 
+- Define the frontend pages, access rules, shared layouts, and routing flow before implementation, and record the final decisions in [FrontendDesignFinal.md](FrontendDesignFinal.md).
+- Build the Welcome, Period Reports, Comparison, Documents, and Administration experiences according to the final frontend design and connect them to the completed backend APIs.
+- Organise the frontend into App Router pages and layouts, feature modules, reusable components, contexts and hooks, API services, shared types, and utility functions.
+- Keep page rendering, feature state, backend communication, and shared data definitions in separate layers so the frontend remains maintainable and scalable as new pages and capabilities are added.
+
 # 8. Cloud Deployment
+
+- Deploy both the Next.js frontend and Spring Boot backend to AWS EC2 using production-ready application builds and environment-specific configuration.
+- Configure Nginx as the public entry point and reverse proxy, routing frontend traffic to Next.js and versioned API traffic to the Spring Boot backend.
+- Deploy the MySQL database to Amazon RDS and configure the backend to connect through protected production credentials and network rules.
