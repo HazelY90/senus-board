@@ -2,15 +2,17 @@
 
 ## 1. Scope and Page Count
 
-The initial frontend contains **three pages**:
+The initial frontend contains **five content pages**:
 
 | Page | Route | Access | Purpose |
 |---|---|---|---|
 | Welcome | `/` | Public | Introduce SenusBoard and provide login and registration entry points. |
-| Dashboard | `/dashboard` | Authenticated `PENDING` or `ACTIVE` ordinary users | Display all four financial data categories for the selected reporting period. |
+| Dashboard | `/dashboard` | Authenticated `PENDING` or `ACTIVE` ordinary users | Display all four financial categories for the selected FY2024, FY2025, HY2025, or HY2026 period. |
+| Comparison | `/dashboard/comparison` | Authenticated `PENDING` or `ACTIVE` ordinary users | Compare one of the two supported equivalent-period pairs. |
+| Documents | `/dashboard/documents` | Authenticated `PENDING` or `ACTIVE` ordinary users | List and download available source documents. |
 | Admin | `/admin` | Authenticated `ACTIVE` Admin users | Review pending registrations and find users by email address. |
 
-Login and registration are modal dialogs on the Welcome page and are not separate pages. The Dashboard is one continuous page rather than four category pages. The Admin page is separate because its audience, permissions, and tasks differ from the financial dashboard.
+Login and registration are modal dialogs on the Welcome page and are not separate pages. The Dashboard defaults to HY2026 and uses in-page period tabs to replace the selected dataset. Dashboard, Comparison, and Documents remain separate routes. The four financial categories remain sections within Dashboard and Comparison pages.
 
 ## 2. Shared Application Rules
 
@@ -54,7 +56,7 @@ Login and registration are modal dialogs on the Welcome page and are not separat
 
 The Welcome page contains:
 
-- SenusBoard name and brand mark.
+- `Senus Board` brand text without a logo.
 - A concise statement describing the platform as a private executive view of Senus PLC financial and operating performance.
 - A short overview of the four dashboard categories: Growth, Profitability, Liquidity, and Capital.
 - A primary `Log in` action.
@@ -98,10 +100,12 @@ After successful registration, the modal explains that the account is pending re
 The Dashboard uses three persistent regions on desktop:
 
 1. A left sidebar containing the four category links.
-2. A top bar containing the reporting-period tabs, comparison controls, and account controls.
-3. A scrollable main area containing all four category sections for the selected period.
+2. A shared header containing page navigation and account controls.
+3. A main area containing all four category sections for the selected Dashboard period or comparison pair.
 
 Selecting a sidebar item scrolls to its section and updates the active item as the user scrolls. It does not navigate to another page or hide the other categories.
+
+The Documents page does not display the category sidebar because documents are not part of the four financial categories.
 
 On narrow screens, the sidebar becomes a compact category drawer or horizontal section navigator. KPI cards and charts stack vertically, and tables may scroll horizontally while keeping metric names visible.
 
@@ -125,26 +129,36 @@ Their order is determined by the authenticated ordinary user's type. Every type 
 
 The main category sections use the same order as the sidebar. User type changes only order and emphasis; it never changes the available dataset.
 
-### 4.3 Top Bar and Reporting-Period Tabs
+### 4.3 Header and Page Navigation
 
 The top bar contains:
 
-- Available reporting-period tabs loaded from `GET /api/v1/data/reporting-periods`.
-- A `Compare` control with `FY2024 vs FY2025` and `HY2025 vs HY2026` options.
-- The selected period label and date range.
-- The authenticated user's name and user type.
-- An account menu with change-password and logout actions.
+- `Senus Board` brand text.
+- Separate navigation links for Period Reports, Comparison, and Documents.
+- A reusable Profile component displaying `Welcome, {name}`.
+- Profile actions for Change Password, Delete Account, and Logout.
 
-The initial known tabs are FY2024, FY2025, HY2025, and HY2026. The API-provided default period is selected on first load. Selecting a tab requests the complete response for that period and refreshes all four category sections together.
+Welcome, Dashboard, and Admin use the same shared header shell. Header height, content width, horizontal padding, `Senus Board` position and typography, and Profile placement remain identical across route changes; only the navigation content changes by page and user role.
+
+Each header navigation label opens its own route. The header remains mounted through the shared Dashboard layout while the page content changes through Next.js navigation.
+
+The Dashboard page contains a period-tab control styled consistently with the Comparison selector. It contains exactly these options:
+
+- `FY2024`.
+- `FY2025`.
+- `HY2025`.
+- `HY2026`.
+
+Selecting a period replaces the financial dataset within the same `/dashboard` page. It does not create a new route. HY2026 is selected by default.
 
 The `Compare` control opens a compact selector containing exactly two valid comparison pairs:
 
 - `FY2024 vs FY2025`.
 - `HY2025 vs HY2026`.
 
-Selecting a pair activates comparison mode and loads both complete period responses. All four category sections then show the two selected periods together in KPI comparisons, charts, and detail tables. The later period is visually emphasised while both exact period labels remain visible. A `Close comparison` action returns to the previously selected single-period tab.
+Selecting a pair on the Comparison page loads both complete period responses and the stored comparison response. Every metric is displayed in a comparison card with two horizontal signed bars, exact values, period labels, and `Reported` or `Calculated` classification. Comparison cards use three columns on desktop, two columns at medium widths, and one column on narrow screens. All four category sections also retain their AI comparison panels.
 
-The frontend must not allow a custom pair. Full-year and half-year performance figures must never appear in the same comparison. In single-period mode, earlier periods without an equivalent prior period show only the selected value.
+The frontend must not allow a custom pair. Full-year and half-year performance figures must never appear in the same comparison.
 
 ### 4.4 Shared Category Structure
 
@@ -152,8 +166,8 @@ Each category section contains:
 
 1. A category heading and concise purpose statement.
 2. Two or three headline KPI cards.
-3. A paired-period comparison chart while comparison mode is active.
-4. A detail table containing every reported and calculated field in the fixed schema.
+3. A metric-card grid containing every reported and calculated field in the fixed schema.
+4. Two-bar metric cards for every field while comparison mode is active.
 5. Category-specific AI analysis when available.
 
 Reported and calculated fields remain visibly distinct. A chart legend always includes exact period labels. Balance-sheet values also show the applicable period-end date.
@@ -174,13 +188,13 @@ Revenue growth uses the backend-calculated value and is not recalculated indepen
 
 The Profitability section displays:
 
-- Gross profit, reported gross margin, and operating loss as headline KPIs.
+- Gross profit, gross margin, and operating loss as headline KPIs.
 - A paired comparison chart for gross profit and operating loss.
-- A detail table containing gross profit, reported gross margin, operating loss, cost of sales, and administrative expenses.
-- A calculated subsection containing calculated gross margin, operating margin, cost-of-sales ratio, and administrative-expense ratio.
+- A detail table containing gross profit, gross margin, operating loss, cost of sales, and administrative expenses.
+- A calculated subsection containing operating margin, cost-of-sales ratio, and administrative-expense ratio.
 - `profitabilityAnalytics` as AI-generated analysis.
 
-When both margins are available, use the labels `Reported gross margin` and `Calculated gross margin`. Losses and expenses retain their negative accounting signs.
+Display one `Gross margin` metric. Use the reported gross margin when available and classify it as `Reported`; otherwise, use the calculated gross margin and classify it as `Calculated`. Losses and expenses retain their negative accounting signs.
 
 ### 4.7 Liquidity Section
 
@@ -208,12 +222,9 @@ A missing bank-debt value is `Unavailable` unless the source explicitly reports 
 
 ### 4.9 Period Overview and Sources
 
-After the four category sections, the Dashboard displays:
+Directly below the period or comparison selector, and before the four category sections, the Dashboard and Comparison pages display `totalAnalytics` in a clearly labelled overall AI-analysis panel.
 
-- `totalAnalytics` in a clearly labelled overall AI-analysis panel.
-- A source-documents panel loaded from `GET /api/v1/data/documents`.
-
-Each source-document row shows its name, type, publication date, AI summary, and a download action when `downloadUrl` is available. The frontend uses the server-provided download URL and never constructs or exposes a local filesystem path.
+The dedicated Documents page loads `GET /api/v1/data/documents`. Each source-document card shows its name, type, publication date, AI summary, and a download action when `downloadUrl` is available. The frontend uses the server-provided download URL and never constructs or exposes a local filesystem path.
 
 ## 5. Admin Page
 
