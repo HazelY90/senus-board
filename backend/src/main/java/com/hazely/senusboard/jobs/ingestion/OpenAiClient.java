@@ -1,8 +1,10 @@
 package com.hazely.senusboard.jobs.ingestion;
 
 import com.hazely.senusboard.jobs.ingestion.dtos.AiAnalyticsResult;
+import com.hazely.senusboard.jobs.ingestion.dtos.AiComparisonResult;
 import com.hazely.senusboard.jobs.ingestion.dtos.AiExtractionResult;
 import com.hazely.senusboard.jobs.ingestion.dtos.AnalyticsDataset;
+import com.hazely.senusboard.jobs.ingestion.dtos.ComparisonDataset;
 import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -40,6 +42,8 @@ public class OpenAiClient implements AiClient {
     private static final String SCHEMA_PATH = "ai/extraction-schema.json";
     private static final String ANALYTICS_PROMPT_PATH = "ai/analytics-prompt.txt";
     private static final String ANALYTICS_SCHEMA_PATH = "ai/analytics-schema.json";
+    private static final String COMPARISON_PROMPT_PATH = "ai/comparison-prompt.txt";
+    private static final String COMPARISON_SCHEMA_PATH = "ai/comparison-schema.json";
     private static final long RETRY_DELAY_MILLIS = 500;
 
     private final OpenAiProperties props;
@@ -51,6 +55,8 @@ public class OpenAiClient implements AiClient {
     private final JsonNode schema;
     private final String analyticsPrompt;
     private final JsonNode analyticsSchema;
+    private final String comparisonPrompt;
+    private final JsonNode comparisonSchema;
 
     public OpenAiClient(OpenAiProperties props, ObjectMapper mapper) throws IOException {
         this(
@@ -62,7 +68,9 @@ public class OpenAiClient implements AiClient {
                 readText(PROMPT_PATH),
                 mapper.readTree(readText(SCHEMA_PATH)),
                 readText(ANALYTICS_PROMPT_PATH),
-                mapper.readTree(readText(ANALYTICS_SCHEMA_PATH))
+                mapper.readTree(readText(ANALYTICS_SCHEMA_PATH)),
+                readText(COMPARISON_PROMPT_PATH),
+                mapper.readTree(readText(COMPARISON_SCHEMA_PATH))
         );
     }
 
@@ -75,7 +83,19 @@ public class OpenAiClient implements AiClient {
             String prompt,
             JsonNode schema
     ) {
-        this(props, mapper, http, filesUrl, responsesUrl, prompt, schema, prompt, schema);
+        this(
+                props,
+                mapper,
+                http,
+                filesUrl,
+                responsesUrl,
+                prompt,
+                schema,
+                prompt,
+                schema,
+                prompt,
+                schema
+        );
     }
 
     OpenAiClient(
@@ -89,6 +109,34 @@ public class OpenAiClient implements AiClient {
             String analyticsPrompt,
             JsonNode analyticsSchema
     ) {
+        this(
+                props,
+                mapper,
+                http,
+                filesUrl,
+                responsesUrl,
+                prompt,
+                schema,
+                analyticsPrompt,
+                analyticsSchema,
+                analyticsPrompt,
+                analyticsSchema
+        );
+    }
+
+    OpenAiClient(
+            OpenAiProperties props,
+            ObjectMapper mapper,
+            HttpClient http,
+            URI filesUrl,
+            URI responsesUrl,
+            String prompt,
+            JsonNode schema,
+            String analyticsPrompt,
+            JsonNode analyticsSchema,
+            String comparisonPrompt,
+            JsonNode comparisonSchema
+    ) {
         this.props = props;
         this.mapper = mapper;
         this.http = http;
@@ -98,6 +146,8 @@ public class OpenAiClient implements AiClient {
         this.schema = schema;
         this.analyticsPrompt = analyticsPrompt;
         this.analyticsSchema = analyticsSchema;
+        this.comparisonPrompt = comparisonPrompt;
+        this.comparisonSchema = comparisonSchema;
     }
 
     @Override
@@ -133,6 +183,25 @@ public class OpenAiClient implements AiClient {
         addFormat(body, "period_analytics", analyticsSchema);
         JsonNode response = sendResponse(body, "structured analytics");
         return mapper.readerFor(AiAnalyticsResult.class)
+                .with(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+                .readValue(outputText(response));
+    }
+
+    @Override
+    public AiComparisonResult compare(ComparisonDataset data)
+            throws IOException, InterruptedException {
+        if (data == null || data.comparisons() == null) {
+            throw new IllegalArgumentException("comparison dataset is required");
+        }
+        ObjectNode body = baseBody(comparisonPrompt);
+        ObjectNode message = body.putArray("input").addObject();
+        message.put("role", "user");
+        message.putArray("content").addObject()
+                .put("type", "input_text")
+                .put("text", mapper.writeValueAsString(data));
+        addFormat(body, "comparison_analytics", comparisonSchema);
+        JsonNode response = sendResponse(body, "structured comparison analytics");
+        return mapper.readerFor(AiComparisonResult.class)
                 .with(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
                 .readValue(outputText(response));
     }

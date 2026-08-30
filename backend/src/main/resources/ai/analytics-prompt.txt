@@ -11,6 +11,9 @@ Analytics rules:
 7. Do not use excluded metrics or infer facts that are absent from the input.
 8. Return null for a category when its available data are insufficient for useful analysis.
 9. Avoid forecasts, recommendations, unsupported causes, and investment advice.
-10. Keep every analytics field concise and suitable for an executive dashboard.
-11. Return one entry for every input period and use its exact code as periodCode.
-12. Return only data matching the supplied JSON Schema.
+10. Keep every analytics field focused and suitable for an executive dashboard.
+11. For each non-null category field, target 60 to 100 words and never exceed 100 words.
+12. For each non-null totalAnalytics field, target 100 to 150 words and never exceed 150 words.
+13. Do not add repetition, filler, or unsupported detail to reach a target length; return null when the available data are insufficient.
+14. Return one entry for every input period and use its exact code as periodCode.
+15. Return only data matching the supplied JSON Schema.

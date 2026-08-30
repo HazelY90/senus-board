@@ -1,5 +1,6 @@
 package com.hazely.senusboard.controllers;
 
+import com.hazely.senusboard.dtos.ComparisonDto;
 import com.hazely.senusboard.dtos.DataDto;
 import com.hazely.senusboard.dtos.DocumentDownloadDto;
 import com.hazely.senusboard.dtos.DocumentsDto;
@@ -13,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.nio.charset.StandardCharsets;
@@ -29,6 +31,15 @@ public class DataController {
     @GetMapping("/{period}")
     public DataDto getData(@PathVariable String period) {
         return service.getData(period);
+    }
+
+    /** Returns stored analytics for an ordered reporting-period comparison. */
+    @GetMapping("/comparisons")
+    public ComparisonDto getComparison(
+            @RequestParam String basePeriod,
+            @RequestParam String targetPeriod
+    ) {
+        return service.getComparison(basePeriod, targetPeriod);
     }
 
     /** Returns all available reporting periods. */

@@ -1,5 +1,6 @@
 package com.hazely.senusboard.services;
 
+import com.hazely.senusboard.dtos.ComparisonDto;
 import com.hazely.senusboard.dtos.DataDto;
 import com.hazely.senusboard.dtos.DocumentDownloadDto;
 import com.hazely.senusboard.dtos.DocumentsDto;
@@ -10,6 +11,7 @@ import com.hazely.senusboard.entities.CalculatedGrowthEntity;
 import com.hazely.senusboard.entities.CalculatedLiquidityEntity;
 import com.hazely.senusboard.entities.CalculatedProfitabilityEntity;
 import com.hazely.senusboard.entities.CapitalEntity;
+import com.hazely.senusboard.entities.ComparisonAnalyticsEntity;
 import com.hazely.senusboard.entities.GrowthEntity;
 import com.hazely.senusboard.entities.LiquidityEntity;
 import com.hazely.senusboard.entities.ProfitabilityEntity;
@@ -21,6 +23,7 @@ import com.hazely.senusboard.repositories.CalculatedGrowthRepository;
 import com.hazely.senusboard.repositories.CalculatedLiquidityRepository;
 import com.hazely.senusboard.repositories.CalculatedProfitabilityRepository;
 import com.hazely.senusboard.repositories.CapitalRepository;
+import com.hazely.senusboard.repositories.ComparisonAnalyticsRepository;
 import com.hazely.senusboard.repositories.GrowthRepository;
 import com.hazely.senusboard.repositories.LiquidityRepository;
 import com.hazely.senusboard.repositories.ProfitabilityRepository;
@@ -41,12 +44,18 @@ import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 
 /** Loads and combines all data stored for one reporting period. */
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class DataService {
+
+    private static final Set<PeriodPair> PAIRS = Set.of(
+            new PeriodPair("FY2024", "FY2025"),
+            new PeriodPair("HY2025", "HY2026")
+    );
 
     private final ReportingPeriodRepository periodRepo;
     private final GrowthRepository growthRepo;
@@ -58,6 +67,7 @@ public class DataService {
     private final CapitalRepository capitalRepo;
     private final CalculatedCapitalRepository capitalCalcRepo;
     private final AnalyticsRepository analyticsRepo;
+    private final ComparisonAnalyticsRepository comparisonRepo;
     private final SourceDocumentRepository sourceRepo;
 
     @Value("${app.baseUrl}")
@@ -91,6 +101,33 @@ public class DataService {
                 mapLiquidity(liquidity, liquidityCalc),
                 mapCapital(capital, capitalCalc),
                 mapAnalytics(analytics)
+        );
+    }
+
+    /** Returns stored analytics for one supported ordered period comparison. */
+    public ComparisonDto getComparison(String baseCode, String targetCode) {
+        String baseValue = cleanCode(baseCode);
+        String targetValue = cleanCode(targetCode);
+        ReportingPeriodEntity base = getPeriod(baseValue);
+        ReportingPeriodEntity target = getPeriod(targetValue);
+        validateComparison(base, target);
+
+        ComparisonAnalyticsEntity analytics = comparisonRepo
+                .findByBasePeriodAndTargetPeriod(base, target)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Comparison analytics not found: " + baseValue + " to " + targetValue
+                ));
+        return new ComparisonDto(
+                mapComparisonPeriod(base),
+                mapComparisonPeriod(target),
+                new ComparisonDto.AnalyticsDto(
+                        analytics.getGrowthAnalytics(),
+                        analytics.getProfitabilityAnalytics(),
+                        analytics.getLiquidityAnalytics(),
+                        analytics.getCapitalAnalytics(),
+                        analytics.getTotalAnalytics()
+                )
         );
     }
 
@@ -160,8 +197,48 @@ public class DataService {
         return code.trim();
     }
 
+    private ReportingPeriodEntity getPeriod(String code) {
+        return periodRepo.findByCode(code)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Reporting period not found: " + code
+                ));
+    }
+
+    private void validateComparison(
+            ReportingPeriodEntity base,
+            ReportingPeriodEntity target
+    ) {
+        if (base.getCode().equals(target.getCode())) {
+            throw comparisonError("Comparison periods must be different");
+        }
+        if (base.getPeriodType() != target.getPeriodType()) {
+            throw comparisonError("Comparison period types must match");
+        }
+        if (!base.getEndDate().isBefore(target.getEndDate())) {
+            throw comparisonError("Comparison periods are not ordered");
+        }
+        if (!PAIRS.contains(new PeriodPair(base.getCode(), target.getCode()))) {
+            throw comparisonError("Comparison period pair is not supported");
+        }
+    }
+
+    private ResponseStatusException comparisonError(String message) {
+        return new ResponseStatusException(HttpStatus.BAD_REQUEST, message);
+    }
+
     private DataDto.PeriodDto mapPeriod(ReportingPeriodEntity period) {
         return new DataDto.PeriodDto(
+                period.getCode(),
+                period.getLabel(),
+                period.getPeriodType(),
+                period.getStartDate(),
+                period.getEndDate()
+        );
+    }
+
+    private ComparisonDto.PeriodDto mapComparisonPeriod(ReportingPeriodEntity period) {
+        return new ComparisonDto.PeriodDto(
                 period.getCode(),
                 period.getLabel(),
                 period.getPeriodType(),
@@ -307,5 +384,8 @@ public class DataService {
                 data == null ? null : data.getCapitalAnalytics(),
                 data == null ? null : data.getTotalAnalytics()
         );
+    }
+
+    private record PeriodPair(String base, String target) {
     }
 }

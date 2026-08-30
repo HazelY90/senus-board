@@ -1,11 +1,13 @@
 package com.hazely.senusboard.services;
 
+import com.hazely.senusboard.dtos.ComparisonDto;
 import com.hazely.senusboard.dtos.DataDto;
 import com.hazely.senusboard.dtos.DocumentDownloadDto;
 import com.hazely.senusboard.dtos.DocumentsDto;
 import com.hazely.senusboard.dtos.ReportingPeriodsDto;
 import com.hazely.senusboard.entities.AnalyticsEntity;
 import com.hazely.senusboard.entities.CalculatedGrowthEntity;
+import com.hazely.senusboard.entities.ComparisonAnalyticsEntity;
 import com.hazely.senusboard.entities.GrowthEntity;
 import com.hazely.senusboard.entities.ReportingPeriodEntity;
 import com.hazely.senusboard.entities.SourceDocumentEntity;
@@ -16,6 +18,7 @@ import com.hazely.senusboard.repositories.CalculatedGrowthRepository;
 import com.hazely.senusboard.repositories.CalculatedLiquidityRepository;
 import com.hazely.senusboard.repositories.CalculatedProfitabilityRepository;
 import com.hazely.senusboard.repositories.CapitalRepository;
+import com.hazely.senusboard.repositories.ComparisonAnalyticsRepository;
 import com.hazely.senusboard.repositories.GrowthRepository;
 import com.hazely.senusboard.repositories.LiquidityRepository;
 import com.hazely.senusboard.repositories.ProfitabilityRepository;
@@ -73,6 +76,8 @@ class DataServiceTest {
     @Mock
     private AnalyticsRepository analyticsRepo;
     @Mock
+    private ComparisonAnalyticsRepository comparisonRepo;
+    @Mock
     private SourceDocumentRepository sourceRepo;
 
     @TempDir
@@ -93,6 +98,7 @@ class DataServiceTest {
                 capitalRepo,
                 capitalCalcRepo,
                 analyticsRepo,
+                comparisonRepo,
                 sourceRepo
         );
         ReflectionTestUtils.setField(service, "baseUrl", base.toString());
@@ -145,6 +151,74 @@ class DataServiceTest {
         ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
                 () -> service.getData("FY2099")
+        );
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+    }
+
+    @Test
+    void getComparisonReturnsStoredAnalytics() {
+        ReportingPeriodEntity basePeriod = period(
+                "FY2024",
+                "Full Year 2024",
+                LocalDate.of(2023, 7, 1),
+                LocalDate.of(2024, 6, 30)
+        );
+        ReportingPeriodEntity targetPeriod = period();
+        ComparisonAnalyticsEntity analytics = new ComparisonAnalyticsEntity();
+        analytics.setGrowthAnalytics("Revenue increased.");
+        analytics.setTotalAnalytics("Overall performance improved.");
+        when(periodRepo.findByCode("FY2024")).thenReturn(Optional.of(basePeriod));
+        when(periodRepo.findByCode("FY2025")).thenReturn(Optional.of(targetPeriod));
+        when(comparisonRepo.findByBasePeriodAndTargetPeriod(basePeriod, targetPeriod))
+                .thenReturn(Optional.of(analytics));
+
+        ComparisonDto data = service.getComparison(" FY2024 ", " FY2025 ");
+
+        assertEquals("FY2024", data.basePeriod().code());
+        assertEquals("FY2025", data.targetPeriod().code());
+        assertEquals("Revenue increased.", data.analytics().growthAnalytics());
+        assertEquals("Overall performance improved.", data.analytics().totalAnalytics());
+    }
+
+    @Test
+    void getComparisonRejectsReversedPair() {
+        ReportingPeriodEntity basePeriod = period();
+        ReportingPeriodEntity targetPeriod = period(
+                "FY2024",
+                "Full Year 2024",
+                LocalDate.of(2023, 7, 1),
+                LocalDate.of(2024, 6, 30)
+        );
+        when(periodRepo.findByCode("FY2025")).thenReturn(Optional.of(basePeriod));
+        when(periodRepo.findByCode("FY2024")).thenReturn(Optional.of(targetPeriod));
+
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> service.getComparison("FY2025", "FY2024")
+        );
+
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+        verifyNoInteractions(comparisonRepo);
+    }
+
+    @Test
+    void getComparisonRejectsMissingAnalytics() {
+        ReportingPeriodEntity basePeriod = period(
+                "FY2024",
+                "Full Year 2024",
+                LocalDate.of(2023, 7, 1),
+                LocalDate.of(2024, 6, 30)
+        );
+        ReportingPeriodEntity targetPeriod = period();
+        when(periodRepo.findByCode("FY2024")).thenReturn(Optional.of(basePeriod));
+        when(periodRepo.findByCode("FY2025")).thenReturn(Optional.of(targetPeriod));
+        when(comparisonRepo.findByBasePeriodAndTargetPeriod(basePeriod, targetPeriod))
+                .thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> service.getComparison("FY2024", "FY2025")
         );
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
@@ -238,12 +312,26 @@ class DataServiceTest {
     }
 
     private ReportingPeriodEntity period() {
+        return period(
+                "FY2025",
+                "Full Year 2025",
+                LocalDate.of(2024, 7, 1),
+                LocalDate.of(2025, 6, 30)
+        );
+    }
+
+    private ReportingPeriodEntity period(
+            String code,
+            String label,
+            LocalDate start,
+            LocalDate end
+    ) {
         ReportingPeriodEntity period = new ReportingPeriodEntity();
-        period.setCode("FY2025");
-        period.setLabel("Full Year 2025");
+        period.setCode(code);
+        period.setLabel(label);
         period.setPeriodType(PeriodType.FULL_YEAR);
-        period.setStartDate(LocalDate.of(2024, 7, 1));
-        period.setEndDate(LocalDate.of(2025, 6, 30));
+        period.setStartDate(start);
+        period.setEndDate(end);
         return period;
     }
 

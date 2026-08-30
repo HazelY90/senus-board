@@ -3,6 +3,8 @@ package com.hazely.senusboard.jobs.ingestion;
 import com.hazely.senusboard.jobs.ingestion.services.AnalyticsPersistenceService;
 import com.hazely.senusboard.jobs.ingestion.services.AnalyticsService;
 import com.hazely.senusboard.jobs.ingestion.services.CalculationService;
+import com.hazely.senusboard.jobs.ingestion.services.ComparisonPersistenceService;
+import com.hazely.senusboard.jobs.ingestion.services.ComparisonAnalyticsService;
 import com.hazely.senusboard.jobs.ingestion.services.ExtractionPersistenceService;
 import com.hazely.senusboard.jobs.ingestion.services.ExtractionService;
 import com.hazely.senusboard.jobs.ingestion.services.SourceDiscoveryService;
@@ -19,6 +21,7 @@ import com.hazely.senusboard.repositories.CalculatedGrowthRepository;
 import com.hazely.senusboard.repositories.CalculatedLiquidityRepository;
 import com.hazely.senusboard.repositories.CalculatedProfitabilityRepository;
 import com.hazely.senusboard.repositories.CapitalRepository;
+import com.hazely.senusboard.repositories.ComparisonAnalyticsRepository;
 import com.hazely.senusboard.repositories.GrowthRepository;
 import com.hazely.senusboard.repositories.IngestionRunRepository;
 import com.hazely.senusboard.repositories.LiquidityRepository;
@@ -63,9 +66,15 @@ public class IngestionJob {
     ExtractionService extractionService(
             AiClient aiClient,
             ExtractionPersistenceService persistenceService,
-            AnalyticsService analyticsService
+            AnalyticsService analyticsService,
+            ComparisonAnalyticsService comparisonService
     ) {
-        return new ExtractionService(aiClient, persistenceService, analyticsService);
+        return new ExtractionService(
+                aiClient,
+                persistenceService,
+                analyticsService,
+                comparisonService
+        );
     }
 
     /**
@@ -136,6 +145,17 @@ public class IngestionJob {
     }
 
     /**
+     * Creates the independent comparison analytics persistence boundary.
+     */
+    @Bean
+    ComparisonPersistenceService comparisonPersistenceService(
+            ReportingPeriodRepository periodRepo,
+            ComparisonAnalyticsRepository comparisonRepo
+    ) {
+        return new ComparisonPersistenceService(periodRepo, comparisonRepo);
+    }
+
+    /**
      * Creates complete-dataset analytics orchestration.
      */
     @Bean
@@ -164,6 +184,24 @@ public class IngestionJob {
                 calcProfitRepo,
                 calcLiquidityRepo,
                 calcCapitalRepo
+        );
+    }
+
+    /**
+     * Creates ordered reporting-period comparison analytics orchestration.
+     */
+    @Bean
+    ComparisonAnalyticsService comparisonAnalyticsService(
+            AiClient aiClient,
+            AnalyticsService analyticsService,
+            ComparisonPersistenceService persistenceService,
+            ObjectMapper mapper
+    ) {
+        return new ComparisonAnalyticsService(
+                aiClient,
+                analyticsService,
+                persistenceService,
+                mapper
         );
     }
 

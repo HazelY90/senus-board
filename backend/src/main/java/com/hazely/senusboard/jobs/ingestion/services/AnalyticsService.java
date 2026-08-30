@@ -76,12 +76,19 @@ public class AnalyticsService {
         persistenceService.save(aiClient.analyze(data));
     }
 
-    private AnalyticsDataset load() {
+    /** Loads the canonical dataset shared by period and comparison analytics. */
+    AnalyticsDataset load() {
         List<AnalyticsDataset.PeriodData> periods = periodRepo.findAll().stream()
                 .sorted(Comparator.comparing(ReportingPeriodEntity::getEndDate))
                 .map(this::periodData)
                 .toList();
         return new AnalyticsDataset(periods);
+    }
+
+    /** Resolves a reporting period already included in the canonical dataset. */
+    ReportingPeriodEntity period(String code) {
+        return periodRepo.findByCode(code)
+                .orElseThrow(() -> new IllegalArgumentException("Unknown analytics period: " + code));
     }
 
     private AnalyticsDataset.PeriodData periodData(ReportingPeriodEntity period) {

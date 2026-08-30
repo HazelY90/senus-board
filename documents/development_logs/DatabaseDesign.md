@@ -25,6 +25,11 @@ Four calculated tables store deterministic values derived from the matching fron
 - `calculated_liquidity`.
 - `calculated_capital`.
 
+Two AI output tables keep single-period analysis separate from explicit period-to-period comparison analysis:
+
+- `analytics`.
+- `comparison_analytics`.
+
 ## 2. Relationships
 
 ~~~text
@@ -38,10 +43,13 @@ reporting_periods ── growth
                   ├─ calculated_liquidity
                   ├─ capital
                   ├─ calculated_capital
-                  └─ analytics
+                  ├─ analytics
+                  └─< comparison_analytics >── reporting_periods
 ~~~
 
 Each reporting and calculated table contains a unique `reporting_period_id` foreign key. Therefore, each reporting period has at most one row in each table.
+
+Each `comparison_analytics` row references one base period and one target period. The ordered period pair is unique, so the direction of a comparison is explicit and cannot be duplicated.
 
 ## 3. Reference Tables
 
@@ -170,7 +178,7 @@ net_cash = cash_balance - bank_debt
 
 Revenue growth uses the previous equivalent reporting period. Full-year values use the prior full year, and half-year values use the equivalent prior half year.
 
-## 5. AI Analysis Table
+## 5. AI Analysis Tables
 
 ### 5.1 analytics
 
@@ -187,6 +195,35 @@ Revenue growth uses the previous equivalent reporting period. Full-year values u
 | updated_at | TIMESTAMP | Required |
 
 Each row contains AI analysis for one reporting period. Category columns align directly with the four frontend categories. `total_analytics` combines the available reported and calculated values across all four categories.
+
+### 5.2 comparison_analytics
+
+| Column | Type | Rule |
+|---|---|---|
+| id | BIGINT | Primary key |
+| base_period_id | BIGINT | Foreign key to reporting_periods |
+| target_period_id | BIGINT | Foreign key to reporting_periods |
+| growth_analytics | TEXT | Nullable |
+| profitability_analytics | TEXT | Nullable |
+| liquidity_analytics | TEXT | Nullable |
+| capital_analytics | TEXT | Nullable |
+| total_analytics | TEXT | Nullable |
+| input_hash | VARCHAR(64) | Required SHA-256 hash of the comparison input |
+| created_at | TIMESTAMP | Required |
+| updated_at | TIMESTAMP | Required |
+
+The ordered pair `(base_period_id, target_period_id)` is unique. The two IDs must be different. Application validation requires both periods to have the same `period_type` and requires the base period to end before the target period.
+
+The initially supported comparison pairs are:
+
+| Base period | Target period | Type |
+|---|---|---|
+| FY2024 | FY2025 | FULL_YEAR |
+| HY2025 | HY2026 | HALF_YEAR |
+
+The five analysis fields contain AI narrative only. Numeric absolute and percentage changes are calculated deterministically by application code and are not persisted in these narrative columns. `input_hash` identifies whether the comparison input has changed and requires regeneration.
+
+This table must be introduced by a new Flyway migration after `V1__create_period_schema.sql` has been applied. An applied migration must not be edited.
 
 ## 6. Write Rules
 
@@ -207,4 +244,10 @@ Each row contains AI analysis for one reporting period. Category columns align d
 - Generate `analytics` only after all reported and calculated rows for the ingestion batch are committed.
 - Upsert one `analytics` row for each reporting period returned by the analysis response.
 - Keep an analysis field null when its category has insufficient data.
+- Build comparison pairs in application code; never ask the model to select periods.
+- Generate only supported ordered pairs whose base and target periods both exist.
+- Reject a comparison whose period types differ or whose base period does not end before its target period.
+- Calculate metric changes in application code. Keep a percentage change null when either value is unavailable or the base value is zero.
+- Upsert one `comparison_analytics` row for each valid ordered pair returned by the comparison analysis response.
+- Skip comparison regeneration when `input_hash` is unchanged.
 - Do not roll back reported or calculated rows when AI analysis fails.

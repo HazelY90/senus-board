@@ -2,7 +2,7 @@
 
 ## 1. Scope
 
-The financial data API is reporting-period based. One data request returns the complete reported, calculated, and AI analysis dataset for one selected period. A separate document endpoint returns source-document metadata and server-hosted download links.
+The financial data API is reporting-period based. One data request returns the complete reported, calculated, and AI analysis dataset for one selected period. A comparison request identifies two periods through query parameters and returns their stored AI comparison analysis. A separate document endpoint returns source-document metadata and server-hosted download links.
 
 The response always contains:
 
@@ -19,14 +19,14 @@ The response always contains:
 |---|---|---|
 | GET | `/api/v1/data/reporting-periods` | Return available periods |
 | GET | `/api/v1/data/{period}` | Return the complete dataset for one period |
+| GET | `/api/v1/data/comparisons?basePeriod={base}&targetPeriod={target}` | Return stored analysis comparing two periods |
 | GET | `/api/v1/data/documents` | Return source-document metadata and download links |
 | GET | `/api/v1/data/documents/{id}/download` | Download one locally stored source document |
 
-The frontend requests two complete period responses when it needs a comparison.
+The comparison endpoint uses GET because it is read-only. Both period codes are query parameters and neither period code appears in the path or request body.
 
 ~~~http
-GET /api/v1/data/FY2025
-GET /api/v1/data/FY2024
+GET /api/v1/data/comparisons?basePeriod=FY2024&targetPeriod=FY2025
 ~~~
 
 ## 3. Reporting Period Object
@@ -155,16 +155,58 @@ GET /api/v1/data/FY2024
 
 ## 7. Comparison Rules
 
+### GET `/api/v1/data/comparisons`
+
+Request:
+
+~~~http
+GET /api/v1/data/comparisons?basePeriod=FY2024&targetPeriod=FY2025
+~~~
+
+Response:
+
+~~~json
+{
+  "basePeriod": {
+    "code": "FY2024",
+    "label": "Full Year 2024",
+    "type": "FULL_YEAR",
+    "startDate": "2023-07-01",
+    "endDate": "2024-06-30"
+  },
+  "targetPeriod": {
+    "code": "FY2025",
+    "label": "Full Year 2025",
+    "type": "FULL_YEAR",
+    "startDate": "2024-07-01",
+    "endDate": "2025-06-30"
+  },
+  "analytics": {
+    "growthAnalytics": "Revenue increased from FY2024 to FY2025.",
+    "profitabilityAnalytics": "Gross margin improved while the operating loss remained material.",
+    "liquidityAnalytics": "Operating cash outflow improved, while closing cash declined.",
+    "capitalAnalytics": "Bank debt increased and the target period retained positive net cash.",
+    "totalAnalytics": "Growth and margin improved, while losses and negative operating cash flow remained material."
+  }
+}
+~~~
+
 - Compare FY2024 only with FY2025.
 - Compare HY2025 only with HY2026.
 - Do not compare full-year performance values with half-year performance values.
-- The frontend obtains comparisons by requesting two complete period responses.
+- `basePeriod` and `targetPeriod` are required non-blank canonical period codes.
+- The ordered pair in the request must match a supported stored comparison.
+- The base period must end before the target period.
 - Point-in-time balances retain each response's exact period end date.
 - Treat null as unavailable and never as zero.
 - Preserve the meaning of negative losses, expenses, and cash flows.
 - Avoid claims based on ignored historical references or excluded metrics.
 - Return null for a category analysis when the available data are insufficient.
 - Avoid recommendations, forecasts, or unsupported causal claims.
+- Every comparison analytics field is a JSON string or null.
+- A missing period or comparison returns HTTP 404.
+- A blank code, identical period pair, reversed pair, unsupported pair, or mismatched period type returns HTTP 400.
+- The endpoint reads stored comparison analysis and does not call the AI provider during the request.
 
 An AI analysis failure must not roll back or invalidate successfully stored reported and calculated data.
 

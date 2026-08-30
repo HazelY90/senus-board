@@ -1,8 +1,10 @@
 package com.hazely.senusboard.jobs.ingestion;
 
 import com.hazely.senusboard.jobs.ingestion.dtos.AiAnalyticsResult;
+import com.hazely.senusboard.jobs.ingestion.dtos.AiComparisonResult;
 import com.hazely.senusboard.jobs.ingestion.dtos.AiExtractionResult;
 import com.hazely.senusboard.jobs.ingestion.dtos.AnalyticsDataset;
+import com.hazely.senusboard.jobs.ingestion.dtos.ComparisonDataset;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -24,4 +26,9 @@ public interface AiClient {
      * Generates analytics from the complete stored reporting dataset.
      */
     AiAnalyticsResult analyze(AnalyticsDataset data) throws IOException, InterruptedException;
+
+    /**
+     * Generates analytics for explicit ordered reporting-period comparisons.
+     */
+    AiComparisonResult compare(ComparisonDataset data) throws IOException, InterruptedException;
 }

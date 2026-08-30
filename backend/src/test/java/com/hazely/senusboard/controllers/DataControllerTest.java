@@ -1,5 +1,6 @@
 package com.hazely.senusboard.controllers;
 
+import com.hazely.senusboard.dtos.ComparisonDto;
 import com.hazely.senusboard.dtos.DataDto;
 import com.hazely.senusboard.dtos.DocumentDownloadDto;
 import com.hazely.senusboard.dtos.DocumentsDto;
@@ -75,6 +76,57 @@ class DataControllerTest {
                 .andExpect(jsonPath("$.error").value("Not Found"))
                 .andExpect(jsonPath("$.message").value("Reporting period not found: FY2099"))
                 .andExpect(jsonPath("$.path").value("/api/v1/data/FY2099"));
+    }
+
+    @Test
+    void getComparisonReturnsStoredAnalytics() throws Exception {
+        ComparisonDto data = new ComparisonDto(
+                comparisonPeriod(
+                        "FY2024",
+                        "Full Year 2024",
+                        LocalDate.of(2023, 7, 1),
+                        LocalDate.of(2024, 6, 30)
+                ),
+                comparisonPeriod(
+                        "FY2025",
+                        "Full Year 2025",
+                        LocalDate.of(2024, 7, 1),
+                        LocalDate.of(2025, 6, 30)
+                ),
+                new ComparisonDto.AnalyticsDto(
+                        "Revenue increased.",
+                        null,
+                        null,
+                        null,
+                        "Overall performance improved."
+                )
+        );
+        when(service.getComparison("FY2024", "FY2025")).thenReturn(data);
+
+        mvc.perform(get("/api/v1/data/comparisons")
+                        .queryParam("basePeriod", "FY2024")
+                        .queryParam("targetPeriod", "FY2025"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.basePeriod.code").value("FY2024"))
+                .andExpect(jsonPath("$.targetPeriod.code").value("FY2025"))
+                .andExpect(jsonPath("$.analytics.growthAnalytics")
+                        .value("Revenue increased."))
+                .andExpect(jsonPath("$.analytics.totalAnalytics")
+                        .value("Overall performance improved."));
+    }
+
+    @Test
+    void getComparisonRejectsBlankPeriod() throws Exception {
+        when(service.getComparison("", "FY2025")).thenThrow(new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Period code is required"
+        ));
+
+        mvc.perform(get("/api/v1/data/comparisons")
+                        .queryParam("basePeriod", "")
+                        .queryParam("targetPeriod", "FY2025"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Period code is required"));
     }
 
     @Test
@@ -176,6 +228,21 @@ class DataControllerTest {
                         new DataDto.CapitalCalcDto(null)
                 ),
                 new DataDto.AnalyticsDto("Revenue increased.", null, null, null, null)
+        );
+    }
+
+    private ComparisonDto.PeriodDto comparisonPeriod(
+            String code,
+            String label,
+            LocalDate start,
+            LocalDate end
+    ) {
+        return new ComparisonDto.PeriodDto(
+                code,
+                label,
+                PeriodType.FULL_YEAR,
+                start,
+                end
         );
     }
 }

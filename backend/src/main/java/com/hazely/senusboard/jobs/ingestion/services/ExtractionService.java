@@ -15,15 +15,18 @@ public class ExtractionService {
     private final AiClient aiClient;
     private final ExtractionPersistenceService persistenceService;
     private final AnalyticsService analyticsService;
+    private final ComparisonAnalyticsService comparisonService;
 
     public ExtractionService(
             AiClient aiClient,
             ExtractionPersistenceService persistenceService,
-            AnalyticsService analyticsService
+            AnalyticsService analyticsService,
+            ComparisonAnalyticsService comparisonService
     ) {
         this.aiClient = aiClient;
         this.persistenceService = persistenceService;
         this.analyticsService = analyticsService;
+        this.comparisonService = comparisonService;
     }
 
     /** Extracts and stores stable category rows from each source document. */
@@ -43,6 +46,7 @@ public class ExtractionService {
         }
         if (!results.isEmpty()) {
             analyticsService.analyze();
+            comparisonService.analyze();
         }
         return List.copyOf(results);
     }
