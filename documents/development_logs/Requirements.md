@@ -9,7 +9,7 @@ SenusBoard will use the Senus investor relations website as the primary source r
 
 Financial reporting is document- and event-driven. Each source document must be stored or registered separately with its document type, publication date, reporting period, source URL, and ingestion status. New reports must append new reporting periods rather than overwrite historical records.
 
-Extracted financial facts must retain their source document, page reference, reporting period, extraction method, confidence, and validation status. Figures identified in the initial project summary must be verified against the original disclosures before they are treated as validated data. Social media must not be used as a primary financial source.
+Extracted financial facts are stored directly in the fixed reporting-period category tables. Individual values do not retain field-level source, page, extraction-method, confidence, or validation-status metadata. Figures identified in the initial project summary must be verified against the original disclosures before they are included in the supported fixed schema. Social media must not be used as a primary financial source.
 
 ## 2. Target Users
 
@@ -47,7 +47,7 @@ The application should provide an executive-level view that allows these users t
 | ROCE | Board, Equity Investors | Derived only when capital-employed inputs are available |
 | Senus 2030 target progress | Management, Board, Equity Investors | Strategic targets are available; actual progress is derived |
 
-The application must not invent unavailable metrics. A metric should be displayed only when its source facts have been validated and all inputs required for its calculation are available. Corporate events and subsequent financing must be considered before conclusions are drawn from historic period-end figures. AI-generated commentary must use only validated facts and deterministically calculated metrics, with source traceability available for each underlying fact.
+The application must not invent unavailable metrics. A metric should be displayed only when it is present in the supported fixed schema and all inputs required for its calculation are available. Corporate events and subsequent financing must be considered before conclusions are drawn from historic period-end figures. AI-generated commentary must use only stored reported values and deterministically calculated metrics.
 
 ## 4. Data Source Validation
 
@@ -146,3 +146,115 @@ All categories remain available in navigation. The application changes the landi
 | Credit Providers | Cash and Liquidity | Capital, Solvency, and Strategic Returns | Profitability and Efficiency | Growth and Revenue |
 
 The initial product must exclude month-on-month revenue growth, historical EBITDA, EBITDA margin, a full EBITDA-to-free-cash-flow bridge, debt-service coverage ratio, ROCE, and cash runway because the currently published data do not support reliable calculations. These metrics may be added later when the required source data and calculation policies are available.
+
+## 6. Final Fixed-Schema Design
+
+The source analysis above remains the complete record of available and unavailable data. The initial database implementation intentionally uses a narrower subset so that every category has a stable response shape across FY2024, FY2025, HY2025, and HY2026.
+
+An individual value may occasionally be unavailable. In that case, the field remains null and the other values for the same period remain valid.
+
+### 6.1 Reporting Period Scope
+
+| Code | Type | Comparable Period |
+| --- | --- | --- |
+| FY2024 | FULL_YEAR | FY2025 |
+| FY2025 | FULL_YEAR | FY2024 |
+| HY2025 | HALF_YEAR | HY2026 |
+| HY2026 | HALF_YEAR | HY2025 |
+
+Full-year and half-year performance values must not be compared directly. Point-in-time balances must retain their applicable reporting date.
+
+### 6.2 Fixed Growth Fields
+
+| Column | Unit | Selection Basis |
+| --- | --- | --- |
+| revenue | EUR | Consistently reported for all four validated periods |
+
+Customer counts, customer mix, revenue mix, ACV, geography, and pipeline remain part of the source analysis but are excluded from the initial fixed schema because equivalent values are not consistently available for every period.
+
+### 6.3 Fixed Profitability Fields
+
+| Column | Unit | Selection Basis |
+| --- | --- | --- |
+| gross_profit | EUR | Consistently reported for annual and half-year periods |
+| gross_margin | PERCENT | Reported in results summaries; may occasionally be absent |
+| operating_loss | EUR | Consistently reported for annual and half-year periods |
+| cost_of_sales | EUR | Consistently reported for annual and half-year periods |
+| administrative_expenses | EUR | Consistently reported for annual and half-year periods |
+
+Operating margin and R&D intensity remain excluded from the initial fixed schema because they are derived or unavailable for some periods.
+
+### 6.4 Fixed Liquidity Fields
+
+| Column | Unit | Selection Basis |
+| --- | --- | --- |
+| cash_balance | EUR | Consistently reported closing balance |
+| operating_cash_flow | EUR | Consistently reported for annual and half-year periods |
+| working_capital_movement | EUR | Available in cash-flow disclosures; may occasionally be absent |
+| current_assets | EUR | Consistently available from balance sheets |
+| current_liabilities | EUR | Consistently available from balance sheets |
+| net_current_position | EUR | Consistently available from balance sheets |
+| capital_expenditure | EUR | Available in cash-flow disclosures; may occasionally be absent |
+
+Free cash flow remains part of the broader product analysis but is excluded from the stored fixed schema because it requires a calculation policy.
+
+### 6.5 Fixed Capital Fields
+
+| Column | Unit | Selection Basis |
+| --- | --- | --- |
+| bank_debt | EUR | Available when debt is outstanding; may be absent or zero in earlier periods |
+| loan_movement | EUR | Available in financing cash flows; may occasionally be absent |
+| interest_expense | EUR | Reported across annual and half-year periods |
+| net_asset_position | EUR | Consistently available from balance sheets |
+
+Equity financing, net cash, contingent consideration, and Senus 2030 target progress remain documented above but are excluded from the initial fixed schema because they are event-specific, calculated, or not comparable across all periods.
+
+### 6.6 Storage and Missing-Value Rules
+
+- Retain `reporting_periods` and `source_documents`.
+- Store reporting values in `growth`, `profitability`, `liquidity`, and `capital`.
+- Give every category table a unique `reporting_period_id` foreign key.
+- Use fixed nullable columns instead of metric, metric-value, or dimension rows.
+- Store monetary values in EUR base units.
+- Store displayed percentages directly, so 81.7% is stored as 81.7.
+- Preserve accounting signs for deductions, losses, and values shown in parentheses.
+- Prefer consolidated or group values when both group and company values are available.
+- Keep an unavailable value null; never replace it with zero.
+- When the same reporting period is extracted again, update existing category fields with later non-null values and retain the existing value wherever the later value is null.
+
+### 6.7 Deferred Scope
+
+The complete source analysis remains available for later expansion. Excluded metrics may be introduced only after equivalent definitions and sufficiently stable values become available across comparable periods. Adding them will require an explicit schema and API design update.
+
+### 6.8 Calculated Metrics
+
+Four calculated tables store deterministic results derived from the fixed reported fields:
+
+- `calculated_growth`.
+- `calculated_profitability`.
+- `calculated_liquidity`.
+- `calculated_capital`.
+
+Each calculated table has one row per reporting period and uses a unique `reporting_period_id` foreign key. This keeps calculated values aligned with the four frontend categories while preserving their separation from reported values.
+
+This final decision supersedes the earlier initial-product exclusion for free cash flow and net cash. They are now included only as deterministic calculated fields and remain distinct from reported source values.
+
+| Table | Column | Formula | Required Inputs |
+| --- | --- | --- | --- |
+| calculated_growth | revenue_growth | `(current revenue / comparable prior revenue - 1) * 100` | Current and equivalent prior-period revenue |
+| calculated_profitability | calculated_gross_margin | `gross_profit / revenue * 100` | Gross profit and revenue |
+| calculated_profitability | operating_margin | `operating_loss / revenue * 100` | Operating loss and revenue |
+| calculated_profitability | cost_of_sales_ratio | `abs(cost_of_sales) / revenue * 100` | Cost of sales and revenue |
+| calculated_profitability | administrative_expense_ratio | `abs(administrative_expenses) / revenue * 100` | Administrative expenses and revenue |
+| calculated_liquidity | operating_cash_flow_margin | `operating_cash_flow / revenue * 100` | Operating cash flow and revenue |
+| calculated_liquidity | free_cash_flow | `operating_cash_flow + capital_expenditure` | Operating cash flow and signed capital expenditure |
+| calculated_liquidity | free_cash_flow_margin | `free_cash_flow / revenue * 100` | Free cash flow and revenue |
+| calculated_liquidity | current_ratio | `current_assets / abs(current_liabilities)` | Current assets and current liabilities |
+| calculated_liquidity | cash_ratio | `cash_balance / abs(current_liabilities)` | Cash balance and current liabilities |
+| calculated_capital | net_cash | `cash_balance - bank_debt` | Cash balance and bank debt |
+
+Revenue growth uses the previous equivalent period: FY2025 uses FY2024, and HY2026 uses HY2025. It remains null when an equivalent prior period is unavailable.
+
+Capital expenditure is stored as a negative cash outflow, so free cash flow uses addition. Bank debt is stored as a positive closing balance, so net cash uses subtraction.
+
+A calculated field remains null when any required input is null, when a denominator is zero, or when equivalent period selection is ambiguous. Calculated values must not overwrite reported fields. In particular, reported `gross_margin` remains in `profitability`, while `calculated_gross_margin` is stored in `calculated_profitability` for validation and consistent comparison.

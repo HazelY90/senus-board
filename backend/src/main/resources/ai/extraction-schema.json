@@ -1,0 +1,101 @@
+{
+  "type": "object",
+  "description": "Stable category values extracted from one source document.",
+  "properties": {
+    "publicationDate": {
+      "type": ["string", "null"],
+      "description": "Document publication date in YYYY-MM-DD form, or null when unavailable."
+    },
+    "aiSummary": {
+      "type": "string",
+      "description": "Concise source-document summary grounded only in the document."
+    },
+    "periods": {
+      "type": "array",
+      "description": "Reporting periods with stable category values.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "startDate": {
+            "type": "string",
+            "description": "Exact reporting period start date in YYYY-MM-DD form."
+          },
+          "endDate": {
+            "type": "string",
+            "description": "Exact reporting period end date in YYYY-MM-DD form."
+          },
+          "growth": {
+            "type": ["object", "null"],
+            "properties": {
+              "revenue": {"type": ["number", "null"]}
+            },
+            "required": ["revenue"],
+            "additionalProperties": false
+          },
+          "profitability": {
+            "type": ["object", "null"],
+            "properties": {
+              "grossProfit": {"type": ["number", "null"]},
+              "grossMargin": {"type": ["number", "null"]},
+              "operatingLoss": {"type": ["number", "null"]},
+              "costOfSales": {"type": ["number", "null"]},
+              "administrativeExpenses": {"type": ["number", "null"]}
+            },
+            "required": [
+              "grossProfit",
+              "grossMargin",
+              "operatingLoss",
+              "costOfSales",
+              "administrativeExpenses"
+            ],
+            "additionalProperties": false
+          },
+          "liquidity": {
+            "type": ["object", "null"],
+            "properties": {
+              "cashBalance": {"type": ["number", "null"]},
+              "operatingCashFlow": {"type": ["number", "null"]},
+              "workingCapitalMovement": {"type": ["number", "null"]},
+              "currentAssets": {"type": ["number", "null"]},
+              "currentLiabilities": {"type": ["number", "null"]},
+              "netCurrentPosition": {"type": ["number", "null"]},
+              "capitalExpenditure": {"type": ["number", "null"]}
+            },
+            "required": [
+              "cashBalance",
+              "operatingCashFlow",
+              "workingCapitalMovement",
+              "currentAssets",
+              "currentLiabilities",
+              "netCurrentPosition",
+              "capitalExpenditure"
+            ],
+            "additionalProperties": false
+          },
+          "capital": {
+            "type": ["object", "null"],
+            "properties": {
+              "bankDebt": {"type": ["number", "null"]},
+              "loanMovement": {"type": ["number", "null"]},
+              "interestExpense": {"type": ["number", "null"]},
+              "netAssetPosition": {"type": ["number", "null"]}
+            },
+            "required": ["bankDebt", "loanMovement", "interestExpense", "netAssetPosition"],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "startDate",
+          "endDate",
+          "growth",
+          "profitability",
+          "liquidity",
+          "capital"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["publicationDate", "aiSummary", "periods"],
+  "additionalProperties": false
+}

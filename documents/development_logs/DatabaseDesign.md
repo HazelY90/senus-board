@@ -1,374 +1,253 @@
 # Database Design
 
-## 1. Design Approach
+## 1. Design Goal
 
-The database design is derived from the single-period response contracts in [APIDesign.md](APIDesign.md), but API DTOs are not copied directly into database tables.
+The schema uses fixed category columns to provide a stable output shape across FY2024, FY2025, HY2025, and HY2026.
 
-Growth, Profitability, Liquidity, and Capital are frontend response groupings. They are assembled by backend services and should not become four structurally similar database tables.
+The reference tables are:
 
-The design uses:
+- `reporting_periods`.
+- `source_documents`.
 
-- One reporting-period table.
-- One source-document table.
-- One metrics table for metric identity, category, and unit metadata.
-- One dimensions table for scalar and breakdown members.
-- One central metric-value table for scalar and breakdown values.
-- One strategic-target table.
-- Staging tables for AI extraction and validation.
+`ingestion_runs` remains an operational audit table linked to `source_documents`.
 
-Each metric has one definition containing its stable code, display name, category, and unit. Metric values reference this definition instead of repeating those attributes.
+The four reporting tables are:
 
-## 2. Relationship Overview
+- `growth`.
+- `profitability`.
+- `liquidity`.
+- `capital`.
+
+Four calculated tables store deterministic values derived from the matching frontend categories:
+
+- `calculated_growth`.
+- `calculated_profitability`.
+- `calculated_liquidity`.
+- `calculated_capital`.
+
+Two AI output tables keep single-period analysis separate from explicit period-to-period comparison analysis:
+
+- `analytics`.
+- `comparison_analytics`.
+
+## 2. Relationships
 
 ~~~text
-metrics ───────────────< metric_values >──── reporting_periods
-dimensions ────────────<       │
-                              ├────────────────────── source_documents
-                              │                              │
-                              │                              └──< ingestion_runs
-                              │                                      │
-                              │                                      └──< extraction_items
-                              │
-                              └── optional extraction origin
+source_documents ──< ingestion_runs
 
-metrics ───────────────< strategic_targets >──── source_documents
-dimensions ────────────<        │
-                               └──────────────────── reporting_periods
+reporting_periods ── growth
+                  ├─ calculated_growth
+                  ├─ profitability
+                  ├─ calculated_profitability
+                  ├─ liquidity
+                  ├─ calculated_liquidity
+                  ├─ capital
+                  ├─ calculated_capital
+                  ├─ analytics
+                  └─< comparison_analytics >── reporting_periods
 ~~~
 
-## 3. Core Tables
+Each reporting and calculated table contains a unique `reporting_period_id` foreign key. Therefore, each reporting period has at most one row in each table.
+
+Each `comparison_analytics` row references one base period and one target period. The ordered period pair is unique, so the direction of a comparison is explicit and cannot be duplicated.
+
+## 3. Reference Tables
 
 ### 3.1 reporting_periods
-
-Stores the periods returned by the reporting-period API.
 
 | Column | Type | Rule |
 |---|---|---|
 | id | BIGINT | Primary key |
-| code | VARCHAR(20) | Unique, for example FY2025 or HY2026 |
-| label | VARCHAR(100) | Frontend label |
+| code | VARCHAR(20) | Unique and required |
+| label | VARCHAR(100) | Required |
 | period_type | VARCHAR(20) | FULL_YEAR or HALF_YEAR |
 | start_date | DATE | Required |
 | end_date | DATE | Required |
 | created_at | TIMESTAMP | Required |
 | updated_at | TIMESTAMP | Required |
 
-The code must be unique, and the start date must not be later than the end date. If the API needs a default period, the service should select it through application configuration or by choosing the latest available period.
-
 ### 3.2 source_documents
-
-Stores the provenance returned inside each API metric value.
 
 | Column | Type | Rule |
 |---|---|---|
 | id | BIGINT | Primary key |
 | name | VARCHAR(255) | Required |
-| document_type | VARCHAR(50) | Financial statements, interim results, website release, or another source type |
-| publication_date | DATE | Nullable when unknown |
+| document_type | VARCHAR(50) | Required |
+| publication_date | DATE | Nullable |
 | source_url | VARCHAR(1000) | Nullable |
-| local_path | VARCHAR(1000) | Nullable |
-| file_hash | VARCHAR(128) | Detects duplicate source files |
+| local_path | VARCHAR(1000) | Nullable path relative to the application working directory |
+| file_hash | VARCHAR(128) | Unique and required |
+| ai_summary | TEXT | Nullable AI summary of the source document |
 | created_at | TIMESTAMP | Required |
 
-The API source object is created from this table together with metric_values.source_page.
+## 4. Category Tables
 
-### 3.3 metrics
+All financial fields use `DECIMAL(20,4)` and allow null values. Every category table also includes `id`, `created_at`, and `updated_at`.
 
-Stores stable metadata shared by every value of the same metric.
+### 4.1 growth
 
-| Column | Type | Rule |
-|---|---|---|
-| id | BIGINT | Primary key |
-| code | VARCHAR(60) | Unique, stable API and service identifier |
-| name | VARCHAR(150) | Human-readable metric name |
-| category | VARCHAR(30) | GROWTH, PROFITABILITY, LIQUIDITY, or CAPITAL |
-| unit | VARCHAR(30) | EUR, PERCENT, PERCENTAGE_POINT, COUNT, or RATIO |
-| description | TEXT | Optional definition of the metric |
-| created_at | TIMESTAMP | Required |
-| updated_at | TIMESTAMP | Required |
-
-Example definitions:
-
-| code | name | category | unit |
-|---|---|---|---|
-| REVENUE | Revenue | GROWTH | EUR |
-| GROSS_MARGIN | Gross Margin | PROFITABILITY | PERCENT |
-| CASH_BALANCE | Cash Balance | LIQUIDITY | EUR |
-| BANK_DEBT | Bank Debt | CAPITAL | EUR |
-
-The category defines which category service normally returns the metric. The unit is joined into the API Metric Value response.
-
-### 3.4 dimensions
-
-Stores the available scalar and breakdown members.
-
-| Column | Type | Rule |
-|---|---|---|
-| id | BIGINT | Primary key |
-| dimension_type | VARCHAR(30) | TOTAL, CUSTOMER_SEGMENT, SOLUTION, GEOGRAPHY, or PIPELINE_STAGE |
-| code | VARCHAR(80) | Stable member code |
-| label | VARCHAR(120) | Frontend label |
-| created_at | TIMESTAMP | Required |
-| updated_at | TIMESTAMP | Required |
-
-Recommended unique key:
-
-~~~text
-(dimension_type, code)
-~~~
-
-TOTAL is stored as a normal row and is used by every scalar metric.
-
-| dimension_type | code | label |
-|---|---|---|
-| TOTAL | TOTAL | Total |
-| CUSTOMER_SEGMENT | ENTERPRISE | Enterprise |
-| CUSTOMER_SEGMENT | INDEPENDENT | Independent |
-| CUSTOMER_SEGMENT | RND | R&D |
-| SOLUTION | SOIL | Soil |
-| SOLUTION | TERRAIN | Terrain |
-| SOLUTION | ERA | ERA |
-| GEOGRAPHY | IRELAND | Ireland |
-| PIPELINE_STAGE | OPEN | Open |
-| PIPELINE_STAGE | CLOSED | Closed |
-
-### 3.5 metric_values
-
-Stores all validated values used by the four category APIs.
-
-| Column | Type | Rule |
-|---|---|---|
-| id | BIGINT | Primary key |
-| period_id | BIGINT | Foreign key to reporting_periods |
-| metric_id | BIGINT | Foreign key to metrics |
-| dimension_id | BIGINT | Foreign key to dimensions; required |
-| value | DECIMAL(20,4) | Required numeric value |
-| value_status | VARCHAR(20) | REPORTED, CALCULATED, or ESTIMATED |
-| value_date | DATE | Optional exact date for a point-in-time value or event |
-| source_document_id | BIGINT | Foreign key to source_documents |
-| source_page | INT | Nullable for a webpage source |
-| comments | TEXT | Formula for calculated values or assumptions for estimated values |
-| extraction_item_id | BIGINT | Optional extraction origin |
-| created_at | TIMESTAMP | Required |
-| updated_at | TIMESTAMP | Required |
-
-Recommended unique key:
-
-~~~text
-(period_id, metric_id, dimension_id)
-~~~
-
-Scalar values reference the TOTAL row in dimensions. Every row in metric_values is formal, validated data and can be used by the public data APIs.
-
-### 3.6 Dimension Use
-
-The current APIs require one breakdown axis at a time:
-
-- Customer segment
-- Solution
-- Geography
-- Pipeline stage
-
-The dimension_id foreign key supports these structures without repeating dimension type, code, and label in metric_values.
-
-| Period | Metric | Dimension type | Dimension code | Value |
-|---|---|---|---|---:|
-| FY2025 | REVENUE | TOTAL | TOTAL | 836991 |
-| FY2025 | CUSTOMER_COUNT | CUSTOMER_SEGMENT | ENTERPRISE | 36 |
-| FY2025 | REVENUE_MIX | CUSTOMER_SEGMENT | ENTERPRISE | 69 |
-| FY2025 | REVENUE_MIX | GEOGRAPHY | IRELAND | 78 |
-| FY2025 | ACV | SOLUTION | ERA | 58900 |
-| HY2026 | PIPELINE_VALUE | PIPELINE_STAGE | OPEN | 500000 |
-
-## 4. Calculation Metadata
-
-Calculated and estimated values are stored directly in metric_values. No separate calculation relationship table is required.
-
-The comments column is used according to value_status:
-
-- REPORTED: optional supporting context.
-- CALCULATED: the calculation formula, including the metric names used as inputs.
-- ESTIMATED: the estimation basis and assumptions.
-
-For example, a calculated free cash flow value can store `Operating cash flow - Capital expenditure` in comments. This keeps the Entity and schema simple while keeping the displayed value explainable.
-
-## 5. Strategic Targets
-
-### 5.1 strategic_targets
-
-A target is stored separately because it is not an observation for the selected reporting period.
-
-| Column | Type | Rule |
-|---|---|---|
-| id | BIGINT | Primary key |
-| metric_id | BIGINT | Foreign key to metrics |
-| dimension_id | BIGINT | Foreign key to dimensions; use TOTAL for scalar targets |
-| label | VARCHAR(150) | Frontend label |
-| operator | VARCHAR(30) | GREATER_THAN_OR_EQUAL or LESS_THAN |
-| target_value | DECIMAL(20,4) | Required |
-| target_period_id | BIGINT | Foreign key to reporting_periods |
-| source_document_id | BIGINT | Foreign key to source_documents |
-| source_page | INT | Nullable |
-| created_at | TIMESTAMP | Required |
-| updated_at | TIMESTAMP | Required |
-
-The Capital service uses strategic_targets.metric_id and dimension_id to obtain the actual value from metric_values for the requested period. The target API code, metric name, category, and unit come from metrics.
-
-Recommended unique key:
-
-~~~text
-(metric_id, dimension_id, target_period_id)
-~~~
-
-## 6. AI Extraction Staging
-
-AI output should not be written directly into metric_values as formal data.
-
-### 6.1 ingestion_runs
-
-| Column | Type | Rule |
-|---|---|---|
-| id | BIGINT | Primary key |
-| source_document_id | BIGINT | Foreign key to source_documents |
-| model_name | VARCHAR(100) | AI model used for extraction |
-| status | VARCHAR(20) | RUNNING, COMPLETED, or FAILED |
-| started_at | TIMESTAMP | Required |
-| completed_at | TIMESTAMP | Nullable |
-| error_message | TEXT | Nullable |
-
-### 6.2 extraction_items
-
-| Column | Type | Rule |
-|---|---|---|
-| id | BIGINT | Primary key |
-| ingestion_run_id | BIGINT | Foreign key to ingestion_runs |
-| period_code | VARCHAR(20) | Extracted period candidate |
-| metric_code | VARCHAR(60) | Extracted metric code candidate |
-| raw_value | VARCHAR(255) | Original extracted representation |
-| numeric_value | DECIMAL(20,4) | Parsed candidate value |
-| unit | VARCHAR(30) | Candidate unit |
-| dimension_id | BIGINT | Foreign key to dimensions; may be nullable while pending |
-| source_page | INT | Source page |
-| source_text | TEXT | Supporting text excerpt |
-| confidence | DECIMAL(5,4) | Extraction confidence |
-| validation_status | VARCHAR(20) | PENDING, VERIFIED, or REJECTED |
-| created_at | TIMESTAMP | Required |
-
-Before an extraction item can become VERIFIED, dimension_id must reference a valid dimensions row, including TOTAL for a scalar value. An accepted item is then converted into a metric_values row, and metric_values.extraction_item_id preserves its origin.
-
-## 7. Java Model
-
-Recommended Entities:
-
-- ReportingPeriodEntity
-- SourceDocumentEntity
-- MetricEntity
-- DimensionEntity
-- MetricValueEntity
-- StrategicTargetEntity
-- IngestionRunEntity
-- ExtractionItemEntity
-
-Recommended enums:
-
-- PeriodType
-- MetricCategory
-- ValueStatus
-- MetricUnit
-- DimensionType
-- ValidationStatus
-- TargetOperator
-- IngestionStatus
-
-MetricEntity supplies stable codes such as REVENUE, GROSS_PROFIT, and CASH_BALANCE. MetricCategory and MetricUnit remain Java enums stored as strings in metrics.
-
-JPA associations should be unidirectional and lazy by default. Controllers should return DTOs rather than Entities.
-
-## 8. API Mapping
-
-### 8.1 Growth
-
-| API field | Database query |
+| Column | Rule |
 |---|---|
-| revenue | REVENUE with TOTAL/TOTAL |
-| customers.total | CUSTOMER_COUNT with TOTAL/TOTAL |
-| customers.enterpriseTotal | CUSTOMER_COUNT with CUSTOMER_SEGMENT/ENTERPRISE |
-| customers.byCustomerSegment | CUSTOMER_COUNT grouped by CUSTOMER_SEGMENT |
-| revenueMix.byCustomerSegment | REVENUE_MIX grouped by CUSTOMER_SEGMENT |
-| revenueMix.bySolution | REVENUE_MIX grouped by SOLUTION |
-| revenueMix.byGeography | REVENUE_MIX grouped by GEOGRAPHY |
-| acvBySolution | ACV grouped by SOLUTION |
-| salesPipeline.closedValue | PIPELINE_VALUE with PIPELINE_STAGE/CLOSED |
-| salesPipeline.openValue | PIPELINE_VALUE with PIPELINE_STAGE/OPEN |
-| salesPipeline.enterpriseCustomers | PIPELINE_CUSTOMER_COUNT with CUSTOMER_SEGMENT/ENTERPRISE |
+| reporting_period_id | Unique foreign key to reporting_periods |
+| revenue | Nullable |
 
-### 8.2 Profitability
+### 4.2 profitability
 
-The service queries scalar TOTAL/TOTAL rows for:
+| Column | Rule |
+|---|---|
+| reporting_period_id | Unique foreign key to reporting_periods |
+| gross_profit | Nullable |
+| gross_margin | Nullable |
+| operating_loss | Nullable |
+| cost_of_sales | Nullable |
+| administrative_expenses | Nullable |
 
-- GROSS_PROFIT
-- GROSS_MARGIN
-- OPERATING_LOSS
-- OPERATING_MARGIN
-- COST_OF_SALES
-- ADMINISTRATIVE_EXPENSES
-- RND_INTENSITY
+### 4.3 liquidity
 
-### 8.3 Liquidity
+| Column | Rule |
+|---|---|
+| reporting_period_id | Unique foreign key to reporting_periods |
+| cash_balance | Nullable |
+| operating_cash_flow | Nullable |
+| working_capital_movement | Nullable |
+| current_assets | Nullable |
+| current_liabilities | Nullable |
+| net_current_position | Nullable |
+| capital_expenditure | Nullable |
 
-The service queries scalar TOTAL/TOTAL rows for:
+### 4.4 capital
 
-- CASH_BALANCE
-- OPERATING_CASH_FLOW
-- FREE_CASH_FLOW
-- WORKING_CAPITAL_MOVEMENT
-- CURRENT_ASSETS
-- CURRENT_LIABILITIES
-- NET_CURRENT_POSITION
-- CAPITAL_EXPENDITURE
+| Column | Rule |
+|---|---|
+| reporting_period_id | Unique foreign key to reporting_periods |
+| bank_debt | Nullable |
+| loan_movement | Nullable |
+| interest_expense | Nullable |
+| net_asset_position | Nullable |
 
-The free cash flow bridge is assembled from operating cash flow, capital expenditure, and free cash flow rows for the same period.
+### 4.5 calculated_growth
 
-### 8.4 Capital
+| Column | Rule |
+|---|---|
+| reporting_period_id | Unique foreign key to reporting_periods |
+| revenue_growth | Nullable percentage |
 
-The service queries scalar TOTAL/TOTAL rows for:
+### 4.6 calculated_profitability
 
-- BANK_DEBT
-- LOAN_MOVEMENT
-- INTEREST_EXPENSE
-- EQUITY_FINANCING
-- NET_CASH
-- NET_ASSET_POSITION
-- CONTINGENT_CONSIDERATION
+| Column | Rule |
+|---|---|
+| reporting_period_id | Unique foreign key to reporting_periods |
+| calculated_gross_margin | Nullable percentage |
+| operating_margin | Nullable percentage |
+| cost_of_sales_ratio | Nullable percentage |
+| administrative_expense_ratio | Nullable percentage |
 
-Strategic target responses combine strategic_targets records with matching actual values from metric_values.
+### 4.7 calculated_liquidity
 
-## 9. Indexes and Validation
+| Column | Rule |
+|---|---|
+| reporting_period_id | Unique foreign key to reporting_periods |
+| operating_cash_flow_margin | Nullable percentage |
+| free_cash_flow | Nullable EUR value |
+| free_cash_flow_margin | Nullable percentage |
+| current_ratio | Nullable ratio |
+| cash_ratio | Nullable ratio |
 
-Recommended indexes:
+### 4.8 calculated_capital
+
+| Column | Rule |
+|---|---|
+| reporting_period_id | Unique foreign key to reporting_periods |
+| net_cash | Nullable EUR value |
+
+Every calculated table also includes `id`, `created_at`, and `updated_at`.
 
 ~~~text
-reporting_periods(code)
-metrics(code)
-metrics(category)
-dimensions(dimension_type, code)
-metric_values(period_id, metric_id)
-metric_values(period_id, metric_id, dimension_id)
-metric_values(source_document_id)
-strategic_targets(metric_id, dimension_id, target_period_id)
-extraction_items(ingestion_run_id, validation_status)
+revenue_growth = (current revenue / equivalent prior revenue - 1) * 100
+calculated_gross_margin = gross_profit / revenue * 100
+operating_margin = operating_loss / revenue * 100
+cost_of_sales_ratio = abs(cost_of_sales) / revenue * 100
+administrative_expense_ratio = abs(administrative_expenses) / revenue * 100
+operating_cash_flow_margin = operating_cash_flow / revenue * 100
+free_cash_flow = operating_cash_flow + capital_expenditure
+free_cash_flow_margin = free_cash_flow / revenue * 100
+current_ratio = current_assets / abs(current_liabilities)
+cash_ratio = cash_balance / abs(current_liabilities)
+net_cash = cash_balance - bank_debt
 ~~~
 
-Application validation must enforce:
+Revenue growth uses the previous equivalent reporting period. Full-year values use the prior full year, and half-year values use the equivalent prior half year.
 
-- A reported value has a source document.
-- A calculated value has a formula in comments.
-- An estimated value has its estimation basis and assumptions in comments.
-- An extracted unit matches the unit in metrics before validation.
-- Every metric_values row references a valid dimensions row.
-- Only VERIFIED extraction_items can be promoted into metric_values.
-- Full-year and half-year comparisons are handled by the frontend using equivalent period types.
+## 5. AI Analysis Tables
 
-## 10. Design Outcome
+### 5.1 analytics
 
-This design keeps storage independent from presentation while supporting every field in the four single-period APIs. It avoids duplicate category tables, centralises metric metadata in metrics, centralises breakdown members in dimensions, keeps calculation comments in metric_values, and allows new metrics or dimensions to be added without changing the central value table structure.
+| Column | Type | Rule |
+|---|---|---|
+| id | BIGINT | Primary key |
+| reporting_period_id | BIGINT | Unique foreign key to reporting_periods |
+| growth_analytics | TEXT | Nullable |
+| profitability_analytics | TEXT | Nullable |
+| liquidity_analytics | TEXT | Nullable |
+| capital_analytics | TEXT | Nullable |
+| total_analytics | TEXT | Nullable |
+| created_at | TIMESTAMP | Required |
+| updated_at | TIMESTAMP | Required |
+
+Each row contains AI analysis for one reporting period. Category columns align directly with the four frontend categories. `total_analytics` combines the available reported and calculated values across all four categories.
+
+### 5.2 comparison_analytics
+
+| Column | Type | Rule |
+|---|---|---|
+| id | BIGINT | Primary key |
+| base_period_id | BIGINT | Foreign key to reporting_periods |
+| target_period_id | BIGINT | Foreign key to reporting_periods |
+| growth_analytics | TEXT | Nullable |
+| profitability_analytics | TEXT | Nullable |
+| liquidity_analytics | TEXT | Nullable |
+| capital_analytics | TEXT | Nullable |
+| total_analytics | TEXT | Nullable |
+| input_hash | VARCHAR(64) | Required SHA-256 hash of the comparison input |
+| created_at | TIMESTAMP | Required |
+| updated_at | TIMESTAMP | Required |
+
+The ordered pair `(base_period_id, target_period_id)` is unique. The two IDs must be different. Application validation requires both periods to have the same `period_type` and requires the base period to end before the target period.
+
+The initially supported comparison pairs are:
+
+| Base period | Target period | Type |
+|---|---|---|
+| FY2024 | FY2025 | FULL_YEAR |
+| HY2025 | HY2026 | HALF_YEAR |
+
+The five analysis fields contain AI narrative only. Numeric absolute and percentage changes are calculated deterministically by application code and are not persisted in these narrative columns. `input_hash` identifies whether the comparison input has changed and requires regeneration.
+
+This table must be introduced by a new Flyway migration after `V1__create_period_schema.sql` has been applied. An applied migration must not be edited.
+
+## 6. Write Rules
+
+- Align exact extracted date ranges to backend-controlled canonical period codes, labels, and types.
+- Map July through June to the ending-year full-year period and July through December to the following-year half-year period.
+- Skip a date range that does not exactly match a supported canonical boundary.
+- Resolve the aligned reporting period by its unique canonical code.
+- Create or update one category row for that period.
+- Apply later non-null values to the existing category row and retain an existing field when the later extraction returns null for that field.
+- Reject duplicate period codes in one extraction response.
+- Reject a period whose start date follows its end date.
+- Reject a period that contains no reported category value.
+- Persist only the primary document period and formal immediately preceding comparative period selected by the extraction rules.
+- Recalculate the affected calculated category rows after any reported category row changes.
+- Keep a calculated field null when an input is null or a denominator is zero.
+- Never copy a calculated value into a reported category column.
+- Store the extraction summary in `source_documents.ai_summary`.
+- Generate `analytics` only after all reported and calculated rows for the ingestion batch are committed.
+- Upsert one `analytics` row for each reporting period returned by the analysis response.
+- Keep an analysis field null when its category has insufficient data.
+- Build comparison pairs in application code; never ask the model to select periods.
+- Generate only supported ordered pairs whose base and target periods both exist.
+- Reject a comparison whose period types differ or whose base period does not end before its target period.
+- Calculate metric changes in application code. Keep a percentage change null when either value is unavailable or the base value is zero.
+- Upsert one `comparison_analytics` row for each valid ordered pair returned by the comparison analysis response.
+- Skip comparison regeneration when `input_hash` is unchanged.
+- Do not roll back reported or calculated rows when AI analysis fails.

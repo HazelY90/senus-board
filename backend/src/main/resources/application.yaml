@@ -1,0 +1,35 @@
+spring:
+  application:
+    name: SenusBoard
+
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: validate
+    open-in-view: true
+
+  jwt:
+    secret: ${JWT_SECRET_KEY}
+    accessTokenExpiration: 1800 # 0.5h
+    refreshTokenExpiration: 604800 # 7 d
+
+app:
+  baseUrl: ${BASEURL:.}
+  auth:
+    emailDomains:
+      - senus.ie
+      - assiduous.ie
+      - investor.ie
+  admin:
+    bootstrap:
+      enabled: ${ADMIN_BOOTSTRAP_ENABLED:false}
+      email: ${ADMIN_BOOTSTRAP_EMAIL:}
+      password: ${ADMIN_BOOTSTRAP_PASSWORD:}
+      name: ${ADMIN_BOOTSTRAP_NAME:}
+      organization: ${ADMIN_BOOTSTRAP_ORGANIZATION:}
