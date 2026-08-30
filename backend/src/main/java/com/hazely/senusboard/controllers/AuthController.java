@@ -17,6 +17,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -72,6 +73,22 @@ public class AuthController {
         return service.refresh(refreshToken);
     }
 
+    /** Clears the browser refresh-token cookie. */
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(HttpServletRequest request) {
+        return noContentWithExpiredCookie(request);
+    }
+
+    /** Permanently deletes the authenticated account and clears its refresh cookie. */
+    @DeleteMapping("/delete")
+    public ResponseEntity<Void> delete(
+            Authentication authentication,
+            HttpServletRequest request
+    ) {
+        service.delete(getId(authentication));
+        return noContentWithExpiredCookie(request);
+    }
+
     /** Returns the current account profile from the authenticated identity. */
     @GetMapping("/me")
     public UserDto getMe(Authentication authentication) {
@@ -92,6 +109,18 @@ public class AuthController {
     ) {
         service.changePassword(getId(authentication), request);
         return ResponseEntity.noContent().build();
+    }
+
+    private ResponseEntity<Void> noContentWithExpiredCookie(HttpServletRequest request) {
+        ResponseCookie cookie = ResponseCookie.from("refreshToken", "")
+                .httpOnly(true)
+                .secure(request.isSecure())
+                .path("/api/v1/auth")
+                .maxAge(Duration.ZERO)
+                .build();
+        return ResponseEntity.noContent()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .build();
     }
 
     private Long getId(Authentication authentication) {

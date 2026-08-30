@@ -223,6 +223,31 @@ class AdminServiceTest {
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
     }
 
+    @Test
+    void deleteUserRemovesOrdinaryAccount() {
+        UserEntity user = user(9L, "Active User", "active@example.com");
+        when(userRepo.findById(9L)).thenReturn(Optional.of(user));
+
+        service.deleteUser(9L);
+
+        verify(userRepo).delete(user);
+    }
+
+    @Test
+    void deleteUserRejectsAdminAccount() {
+        UserEntity user = user(9L, "Admin", "admin@example.com");
+        user.setRole(Role.ADMIN);
+        when(userRepo.findById(9L)).thenReturn(Optional.of(user));
+
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> service.deleteUser(9L)
+        );
+
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+        verify(userRepo, never()).delete(any(UserEntity.class));
+    }
+
     private UserEntity user(Long id, String name, String email) {
         UserEntity user = new UserEntity();
         user.setId(id);

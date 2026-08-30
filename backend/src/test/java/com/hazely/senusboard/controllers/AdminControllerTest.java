@@ -19,6 +19,7 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -151,5 +152,13 @@ class AdminControllerTest {
                 .andExpect(status().isNoContent());
 
         verify(service).disableUser(9L);
+    }
+
+    @Test
+    void deleteUserReturnsNoContent() throws Exception {
+        mvc.perform(delete("/api/v1/admin/delete-user/9"))
+                .andExpect(status().isNoContent());
+
+        verify(service).deleteUser(9L);
     }
 }

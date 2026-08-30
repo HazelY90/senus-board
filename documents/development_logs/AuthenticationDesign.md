@@ -102,12 +102,15 @@ Authentication endpoints use the `/api/v1/auth` base path. Administrative user-m
 | POST | `/api/v1/auth/login` | Public | Authenticate a pending or active account and issue access and refresh tokens |
 | GET | `/api/v1/auth/me` | Access token | Return the authenticated user's profile |
 | POST | `/api/v1/auth/refresh` | Refresh token | Issue a new access token from a valid refresh token |
+| POST | `/api/v1/auth/logout` | Public | Expire the browser refresh-token cookie |
+| DELETE | `/api/v1/auth/delete` | Access token | Permanently delete the authenticated non-Admin account |
 | POST | `/api/v1/auth/change-password` | Access token | Replace the authenticated user's password after verifying the current password |
 | GET | `/api/v1/admin/search-user?email={email}` | Admin access token | Find a user by email address |
 | GET | `/api/v1/admin/get-pending` | Admin access token | Return all users awaiting Admin review |
 | POST | `/api/v1/admin/create-user` | Admin access token | Create an active ordinary user without registration review |
 | POST | `/api/v1/admin/verify-user/{id}` | Admin access token | Approve a pending registration |
 | POST | `/api/v1/admin/disable-user/{id}` | Admin access token | Disable an active ordinary user and terminate access |
+| DELETE | `/api/v1/admin/delete-user/{id}` | Admin access token | Permanently delete an ordinary user account |
 
 ### 7.1 Register
 
@@ -135,25 +138,33 @@ The refresh request reads the refresh token from the HTTP-only `refreshToken` co
 
 The change-password request contains `currentPassword` and `newPassword`. The backend verifies the current password, applies the password requirements for the authenticated user's role, hashes the new password, and replaces the stored hash. A successful change returns HTTP 204.
 
-### 7.6 Search User
+### 7.6 Logout
+
+The logout endpoint accepts no request body and does not require a valid access token. It returns HTTP 204 with an empty HTTP-only `refreshToken` cookie using the same `/api/v1/auth` path and an immediate expiry. This overwrites the browser cookie even when the access token has already expired. Because access tokens are stateless, the client must also discard its local access token.
+
+### 7.7 Delete Account
+
+The delete endpoint permanently deletes the account identified by the authenticated principal. It accepts no path ID or request body, so an authenticated account cannot select another account for deletion. Admin accounts cannot use this endpoint and receive HTTP 403. A successful deletion returns HTTP 204 and expires the refresh-token cookie. Existing access and refresh tokens can no longer authenticate because their user ID no longer exists.
+
+### 7.8 Search User
 
 The search-user endpoint is available only to an authenticated `ADMIN` user. The required `email` query parameter is trimmed and normalised to lowercase before an exact lookup.
 
 A successful lookup returns HTTP 200 with the user's safe profile: `id`, `name`, `email`, `organization`, `description`, `role`, and `status`. It never returns `password`. If no user matches the email address, the endpoint returns HTTP 404.
 
-### 7.7 Get Pending Users
+### 7.9 Get Pending Users
 
 The get-pending endpoint is available only to an authenticated `ADMIN` user. It accepts no request body or query parameters.
 
 A successful request returns HTTP 200 with all users whose status is `PENDING`. Each result uses `UserDto` and contains `id`, `name`, `email`, `organization`, `description`, `role`, and `status`. The response is an empty list when no pending users exist and never includes password hashes.
 
-### 7.8 Create User
+### 7.10 Create User
 
 The create-user endpoint is available only to an authenticated `ADMIN` user. The request contains `name`, `email`, `password`, `role`, and `organization`. The role must be one of the four ordinary roles and must not be `ADMIN`. The backend validates the enterprise email domain and ordinary-user password strength.
 
 A successful request creates the user with `ACTIVE` status and returns HTTP 201. The account can authenticate immediately and does not enter the registration review flow.
 
-### 7.9 Verify User
+### 7.11 Verify User
 
 The verify-user endpoint is available only to an authenticated `ADMIN` user. The `{id}` path parameter identifies the target user. The request body contains the required Boolean field `isApproved`.
 
@@ -161,11 +172,17 @@ The target user must have `PENDING` status. When `isApproved` is `true`, the bac
 
 An account that is already active, rejected, or disabled cannot be processed through the registration verification flow again.
 
-### 7.10 Disable User
+### 7.12 Disable User
 
 The disable-user endpoint is available only to an authenticated `ADMIN` user. The `{id}` path parameter identifies the target user, which must be an ordinary user with `ACTIVE` status. No request body is required.
 
 A successful request changes the target account to `DISABLED`, invalidates its existing sessions and refresh tokens, and returns HTTP 204. A disabled account cannot authenticate or access protected data.
+
+### 7.13 Delete User
+
+The delete-user endpoint is available only to an authenticated `ADMIN` user. The `{id}` path parameter identifies the target ordinary account, and no request body is required. An `ADMIN` account cannot be deleted through this endpoint; attempting to do so returns HTTP 403.
+
+A successful request permanently deletes the target account and returns HTTP 204. Existing access and refresh tokens can no longer authenticate because the user ID no longer exists.
 
 ## 8. Admin Permissions
 
@@ -176,6 +193,7 @@ An Admin may:
 - Create a new ordinary user.
 - Approve a pending registration.
 - Disable an active ordinary user.
+- Permanently delete an ordinary user.
 
 Admin creation and privilege delegation are not exposed through the ordinary user-management API.
 

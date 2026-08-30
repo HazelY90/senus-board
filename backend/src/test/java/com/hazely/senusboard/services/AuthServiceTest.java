@@ -314,6 +314,31 @@ class AuthServiceTest {
         verify(userRepo, never()).save(any(UserEntity.class));
     }
 
+    @Test
+    void deleteRemovesAuthenticatedAccount() {
+        UserEntity user = user(Status.ACTIVE);
+        when(userRepo.findById(7L)).thenReturn(Optional.of(user));
+
+        service.delete(7L);
+
+        verify(userRepo).delete(user);
+    }
+
+    @Test
+    void deleteRejectsAdminAccount() {
+        UserEntity user = user(Status.ACTIVE);
+        user.setRole(Role.ADMIN);
+        when(userRepo.findById(7L)).thenReturn(Optional.of(user));
+
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> service.delete(7L)
+        );
+
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+        verify(userRepo, never()).delete(any(UserEntity.class));
+    }
+
     private RegisterRequestDto request(Role role, String email, String password) {
         return new RegisterRequestDto(
                 " Test User ",
