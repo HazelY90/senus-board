@@ -22,7 +22,6 @@ The product follows several data-integrity principles:
 - AI extraction is restricted to the fixed reporting schema and must preserve accounting signs and source units.
 - AI commentary receives only stored reported values and deterministic calculations; it does not produce forecasts or unsupported causal claims.
 - Full-year periods are compared only with full-year periods, and half-year periods only with equivalent half-year periods.
-- Historic balances are interpreted with relevant financing and corporate-event context.
 
 The detailed product scope, metric selection, source validation, and known data limitations are recorded in [Requirements](documents/development_logs/Requirements.md). Page behaviour and presentation rules are defined in the [Final Frontend Design](documents/development_logs/FrontendDesignFinal.md).
 
@@ -64,7 +63,7 @@ Detailed decisions are available in the [Database Design](documents/development_
 | Security | Spring Security, JWT access and refresh tokens, Server-Sent Events |
 | Database | MySQL, Flyway migrations |
 | AI integration | OpenAI API, strict JSON Schema structured outputs |
-| Validation and mapping | Jakarta Validation, Jackson, MapStruct |
+| Validation and mapping | Jakarta Validation, Jackson |
 | Build and quality | Maven Wrapper, npm, ESLint, JUnit, Mockito, Spring MVC tests |
 
 Technology choices and the intended AWS EC2, Nginx, and Amazon RDS deployment topology are summarised in [Development Progress](documents/development_logs/Progress.md). Deployment configuration is not currently included in this repository.
@@ -185,20 +184,18 @@ Automated tests reduce implementation risk. The developer's manual review covers
 - Individual financial values do not retain field-level page references, extraction confidence, or validation status.
 - The ingestion job processes documents sequentially and has no source-priority policy for conflicting documents.
 - AI narrative is interpretation of supplied data, not a forecast, recommendation, or substitute for the source disclosure.
-- Cash-runway, EBITDA, leverage, debt-service coverage, and ROCE outputs remain unavailable unless their required inputs and calculation policies are validated.
-- The repository records an intended AWS deployment architecture, but deployment automation and live demo details are outside the current repository state.
 
 The rationale and complete boundaries are maintained in [Requirements](documents/development_logs/Requirements.md), [Database Design](documents/development_logs/DatabaseDesign.md), and [AI Extraction Job Design](documents/development_logs/AIExtractionJob.md).
 
 ## Documentation
 
-- [Requirements](documents/development_logs/Requirements.md) - product goals, source research, metric selection, assumptions, and limitations.
 - [Development Progress](documents/development_logs/Progress.md) - project sequence, technology choices, and intended deployment topology.
+- [Requirements](documents/development_logs/Requirements.md) - product goals, source research, metric selection, assumptions, and limitations.
 - [Initial Frontend Design](documents/development_logs/FrontendDesignInitial.md) - initial category and visualisation design.
-- [Final Frontend Design](documents/development_logs/FrontendDesignFinal.md) - final routes, access rules, page behaviour, and frontend data flow.
-- [API Design](documents/development_logs/APIDesign.md) - financial data endpoints, response contracts, comparisons, and source documents.
-- [Authentication Design](documents/development_logs/AuthenticationDesign.md) - account lifecycle, credentials, tokens, permissions, and events.
 - [Database Design](documents/development_logs/DatabaseDesign.md) - schema, relationships, calculations, analytics tables, and write rules.
 - [AI Extraction Job Design](documents/development_logs/AIExtractionJob.md) - ingestion stages, structured output, validation, persistence, and analysis.
+- [API Design](documents/development_logs/APIDesign.md) - financial data endpoints, response contracts, comparisons, and source documents.
+- [Authentication Design](documents/development_logs/AuthenticationDesign.md) - account lifecycle, credentials, tokens, permissions, and events.
+- [Final Frontend Design](documents/development_logs/FrontendDesignFinal.md) - final routes, access rules, page behaviour, and frontend data flow.
 - [Backend README](backend/README.md) - backend configuration, execution, testing, and operations.
 - [Frontend README](frontend/README.md) - frontend configuration, execution, routes, and development guidance.

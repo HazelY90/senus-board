@@ -60,6 +60,7 @@ The application will use a single repository containing the frontend and backend
 
 # 8. Cloud Deployment
 
-- Deploy both the Next.js frontend and Spring Boot backend to AWS EC2 using production-ready application builds and environment-specific configuration.
-- Configure Nginx as the public entry point and reverse proxy, routing frontend traffic to Next.js and versioned API traffic to the Spring Boot backend.
-- Deploy the MySQL database to Amazon RDS and configure the backend to connect through protected production credentials and network rules.
+- Deploy the production frontend and backend builds to an Ubuntu AWS EC2 instance using environment-specific configuration.
+- Deploy MySQL to Amazon RDS, apply the database migrations, and protect access with appropriate security group rules.
+- Manage the frontend and backend with systemd to support automatic startup, failure recovery, and centralised logging.
+- Configure Nginx as the public entry point and reverse proxy while keeping the application services private.
