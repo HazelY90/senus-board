@@ -1,0 +1,31 @@
+{
+  "type": "object",
+  "description": "Period analytics generated from the complete stored dataset.",
+  "properties": {
+    "periods": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "periodCode": {"type": "string"},
+          "growthAnalytics": {"type": ["string", "null"]},
+          "profitabilityAnalytics": {"type": ["string", "null"]},
+          "liquidityAnalytics": {"type": ["string", "null"]},
+          "capitalAnalytics": {"type": ["string", "null"]},
+          "totalAnalytics": {"type": ["string", "null"]}
+        },
+        "required": [
+          "periodCode",
+          "growthAnalytics",
+          "profitabilityAnalytics",
+          "liquidityAnalytics",
+          "capitalAnalytics",
+          "totalAnalytics"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["periods"],
+  "additionalProperties": false
+}

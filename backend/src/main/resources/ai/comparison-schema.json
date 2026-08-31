@@ -1,0 +1,33 @@
+{
+  "type": "object",
+  "description": "Analytics for supplied ordered reporting-period comparisons.",
+  "properties": {
+    "comparisons": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "basePeriodCode": {"type": "string"},
+          "targetPeriodCode": {"type": "string"},
+          "growthAnalytics": {"type": ["string", "null"]},
+          "profitabilityAnalytics": {"type": ["string", "null"]},
+          "liquidityAnalytics": {"type": ["string", "null"]},
+          "capitalAnalytics": {"type": ["string", "null"]},
+          "totalAnalytics": {"type": ["string", "null"]}
+        },
+        "required": [
+          "basePeriodCode",
+          "targetPeriodCode",
+          "growthAnalytics",
+          "profitabilityAnalytics",
+          "liquidityAnalytics",
+          "capitalAnalytics",
+          "totalAnalytics"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["comparisons"],
+  "additionalProperties": false
+}
